@@ -1,0 +1,19 @@
+[project]
+name = "leadforge-database"
+version = "1.0.0"
+description = "SQLAlchemy 2.0 async models + Alembic"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29",
+    "psycopg2-binary>=2.9",
+    "alembic>=1.13",
+    "leadforge-config",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_database"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

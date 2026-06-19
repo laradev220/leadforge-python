@@ -1,0 +1,20 @@
+[project]
+name = "leadforge-worker-core"
+version = "1.0.0"
+description = "Arq worker wrapper, structlog, job queue logging"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "arq>=0.26",
+    "redis>=5.0",
+    "structlog>=24.4",
+    "leadforge-config",
+    "leadforge-database",
+    "leadforge-shared",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_worker_core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

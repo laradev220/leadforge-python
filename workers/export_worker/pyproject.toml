@@ -1,0 +1,20 @@
+[project]
+name = "export-worker"
+version = "1.0.0"
+description = "Export generation worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "arq>=0.26",
+    "openpyxl>=3.1",
+    "leadforge-config",
+    "leadforge-database",
+    "leadforge-shared",
+    "leadforge-worker-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_export_worker"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

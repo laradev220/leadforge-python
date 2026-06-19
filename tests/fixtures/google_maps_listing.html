@@ -1,0 +1,44 @@
+<!-- Test fixture: Google Maps business listing page with JSON-LD -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Restaurants in New York</title>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Joe's Pizza",
+        "telephone": "+1-212-555-1234",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "123 Broadway",
+            "addressLocality": "New York",
+            "addressRegion": "NY",
+            "postalCode": "10001"
+        },
+        "geo": {
+            "latitude": 40.7128,
+            "longitude": -74.0060
+        },
+        "url": "https://joespizza.com",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.5",
+            "reviewCount": "230"
+        }
+    }
+    </script>
+    <meta property="og:title" content="Joe's Pizza" />
+    <meta property="og:description" content="Authentic New York pizza since 1975." />
+    <meta property="og:url" content="https://joespizza.com" />
+</head>
+<body>
+    <h1 itemprop="name">Joe's Pizza</h1>
+    <p class="address" itemprop="address">123 Broadway, New York, NY 10001</p>
+    <p class="phone" itemprop="telephone">+1-212-555-1234</p>
+    <a href="https://joespizza.com" class="website">Visit Website</a>
+    <div class="rating" aria-label="4.5 stars">4.5</div>
+    <span class="reviews" aria-label="230 reviews">230 reviews</span>
+    <a href="mailto:info@joespizza.com">info@joespizza.com</a>
+</body>
+</html>

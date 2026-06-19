@@ -1,0 +1,873 @@
+{
+  "info": {
+    "name": "LeadForge API",
+    "description": "Complete API collection for LeadForge — a queue-driven lead discovery, enrichment, scoring, and export platform.\n\n## Quick Start\n\n1. **Import** this collection into Postman\n2. **Set `baseUrl`** variable (default: `http://localhost:8000`)\n3. **Run Register** to create a test user\n4. **Run Login** — the auth token is automatically stored as `{{authToken}}`\n5. **Create a search job** to kick off discovery\n6. **Monitor via Health & Scrapers** endpoints\n7. **Browse leads & businesses** as they populate\n8. **Export data** when ready\n\n## Architecture\n\n```\nSearch Job → Discovery Worker → Website Worker → Contact Worker → Social Worker → Scoring Worker → Export\n```\n\nAll endpoints under `/api/v1` require JWT Bearer token auth except `/health`, `/health/scrapers`, `/metrics`, and scraper `/health` & `/metrics`.\nAdmin endpoints require `ADMIN` role (update user role in DB: `UPDATE users SET role = 'ADMIN' WHERE email = '...';`).\n\n## Environment Variables\n\n| Variable | Default | Description |\n|---|---|---|\n| `baseUrl` | `http://localhost:8000` | API base URL |\n| `authToken` | (auto) | JWT token set by Login/Register |\n| `userId` | (auto) | Current user ID |\n| `searchJobId` | (manual) | ID of a search job |\n| `businessId` | (manual) | ID of a business/lead |\n| `exportId` | (manual) | ID of an export |\n| `profileId` | (manual) | ID of a social profile |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "leadforge"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "searchJobId", "value": "", "type": "string" },
+    { "key": "businessId", "value": "", "type": "string" },
+    { "key": "exportId", "value": "", "type": "string" },
+    { "key": "profileId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🩺 Health & System",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Health check succeeds\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.service).to.eql(\"leadforge-api\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "GET /health/scrapers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Scraper health succeeds\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.service).to.eql(\"leadforge-scrapers\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health/scrapers", "host": ["{{baseUrl}}"], "path": ["health", "scrapers"] }
+          }
+        },
+        {
+          "name": "GET /metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/metrics", "host": ["{{baseUrl}}"], "path": ["metrics"] }
+          }
+        }
+      ],
+      "description": "Health check and metrics endpoints — no auth required."
+    },
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "POST Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration succeeds\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.token).to.not.be.empty;",
+                  "    pm.collectionVariables.set(\"authToken\", json.data.token);",
+                  "    pm.collectionVariables.set(\"userId\", json.data.user.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@leadforge.dev\",\n  \"password\": \"password123\",\n  \"fullName\": \"Test User\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+          }
+        },
+        {
+          "name": "POST Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login succeeds\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.token).to.not.be.empty;",
+                  "    pm.collectionVariables.set(\"authToken\", json.data.token);",
+                  "    pm.collectionVariables.set(\"userId\", json.data.user.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@leadforge.dev\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "GET Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns current user\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.email).to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        }
+      ],
+      "description": "Authentication endpoints. Login/Register auto-store the JWT as `{{authToken}}`."
+    },
+    {
+      "name": "🔍 Search Jobs",
+      "item": [
+        {
+          "name": "POST Create Search Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Search job created\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.job_id).to.not.be.empty;",
+                  "    pm.expect(json.data.status).to.eql(\"PENDING\");",
+                  "    pm.collectionVariables.set(\"searchJobId\", json.data.job_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keyword\": \"Restaurant\",\n  \"location\": \"London\",\n  \"country\": \"GB\",\n  \"radius_km\": 5\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/search-jobs", "host": ["{{baseUrl}}"], "path": ["api", "v1", "search-jobs"] }
+          }
+        },
+        {
+          "name": "GET List Search Jobs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Lists search jobs\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) {",
+                  "        pm.collectionVariables.set(\"searchJobId\", json.data[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/search-jobs?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "search-jobs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Search Job by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns search job details\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.eql(pm.collectionVariables.get(\"searchJobId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/search-jobs/{{searchJobId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "search-jobs", "{{searchJobId}}"] }
+          }
+        },
+        {
+          "name": "POST Cancel Search Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Search job cancelled\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.cancelled).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "" },
+            "url": { "raw": "{{baseUrl}}/api/v1/search-jobs/{{searchJobId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "v1", "search-jobs", "{{searchJobId}}", "cancel"] }
+          }
+        }
+      ],
+      "description": "Search jobs are the entry point for discovery. Creating one kicks off the pipeline."
+    },
+    {
+      "name": "🏢 Businesses",
+      "item": [
+        {
+          "name": "GET List Businesses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Lists businesses\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) {",
+                  "        pm.collectionVariables.set(\"businessId\", json.data[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/businesses?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "businesses"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "country", "value": "", "disabled": true },
+                { "key": "category", "value": "", "disabled": true },
+                { "key": "website_status", "value": "", "disabled": true },
+                { "key": "name", "value": "", "disabled": true },
+                { "key": "city", "value": "", "disabled": true },
+                { "key": "min_rating", "value": "", "disabled": true },
+                { "key": "max_rating", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Business by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns business details\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.eql(pm.collectionVariables.get(\"businessId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}"] }
+          }
+        },
+        {
+          "name": "POST Re-Enrich Business",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Re-enrich triggered\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.reEnriched).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "" },
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/re-enrich", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}", "re-enrich"] }
+          }
+        },
+        {
+          "name": "GET Business Website",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns website data or null\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/website", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}", "website"] }
+          }
+        },
+        {
+          "name": "GET Business Contacts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns contacts\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/contacts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}", "contacts"] }
+          }
+        },
+        {
+          "name": "POST Add Contact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Contact added\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.value).to.eql(\"info@example.com\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"EMAIL\",\n  \"value\": \"info@example.com\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/contacts", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}", "contacts"] }
+          }
+        },
+        {
+          "name": "GET Business Social Profiles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns social profiles\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) {",
+                  "        pm.collectionVariables.set(\"profileId\", json.data[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/businesses/{{businessId}}/social-profiles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "businesses", "{{businessId}}", "social-profiles"] }
+          }
+        }
+      ],
+      "description": "Businesses are discovered by search jobs and store company data, website info, contacts, and social profiles."
+    },
+    {
+      "name": "⭐ Leads",
+      "item": [
+        {
+          "name": "GET List Leads",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Lists leads with scores\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) {",
+                  "        pm.collectionVariables.set(\"businessId\", json.data[0].business.id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/leads?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "leads"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "score_min", "value": "", "disabled": true },
+                { "key": "score_max", "value": "", "disabled": true },
+                { "key": "grade", "value": "", "disabled": true },
+                { "key": "website_status", "value": "", "disabled": true },
+                { "key": "best_contact_method", "value": "", "disabled": true },
+                { "key": "city", "value": "", "disabled": true },
+                { "key": "country", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Lead by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns lead details\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/leads/{{businessId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "leads", "{{businessId}}"] }
+          }
+        }
+      ],
+      "description": "Leads combine a business with its lead score, contacts, social profiles, and website in a single enriched response."
+    },
+    {
+      "name": "📊 Analytics",
+      "item": [
+        {
+          "name": "GET Dashboard Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns dashboard stats\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('businesses');",
+                  "    pm.expect(json.data).to.have.property('websitesFound');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/analytics/dashboard", "host": ["{{baseUrl}}"], "path": ["api", "v1", "analytics", "dashboard"] }
+          }
+        },
+        {
+          "name": "GET Lead Distribution",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns lead distribution\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('distribution');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/analytics/lead-distribution", "host": ["{{baseUrl}}"], "path": ["api", "v1", "analytics", "lead-distribution"] }
+          }
+        }
+      ],
+      "description": "Analytics endpoints — require authentication."
+    },
+    {
+      "name": "📤 Exports",
+      "item": [
+        {
+          "name": "POST Create Export",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Export created\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.export_id).to.not.be.empty;",
+                  "    pm.collectionVariables.set(\"exportId\", json.data.export_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"CSV\",\n  \"filters\": {\n    \"score_min\": 60\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exports", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exports"] }
+          }
+        },
+        {
+          "name": "GET List Exports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Lists exports\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/exports", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exports"] }
+          }
+        },
+        {
+          "name": "GET Download Export",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Download returns file or status\", () => {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.test(\"File content type is CSV\", () => {",
+                  "            pm.expect(pm.response.headers.get('Content-Type')).to.include('csv');",
+                  "        });",
+                  "    } else {",
+                  "        pm.test(\"Not ready yet or missing\", () => {",
+                  "            const json = pm.response.json();",
+                  "            pm.expect(json.error.code).to.be.oneOf(['NOT_READY', 'NOT_FOUND']);",
+                  "        });",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/exports/{{exportId}}/download", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exports", "{{exportId}}", "download"] }
+          }
+        }
+      ],
+      "description": "Export leads in CSV, JSON, or XLSX format. Filters are now passed through to the export worker."
+    },
+    {
+      "name": "🔬 Scrapers (Admin)",
+      "item": [
+        {
+          "name": "GET Scraper Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/health", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "health"] }
+          }
+        },
+        {
+          "name": "GET Scraper Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/metrics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "metrics"] }
+          }
+        },
+        {
+          "name": "GET Cache Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/cache/stats", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "cache", "stats"] }
+          }
+        },
+        {
+          "name": "POST Cache Invalidate (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/page-to-purge\",\n  \"user_agent\": \"default\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/cache/invalidate?url=https://example.com/page&user_agent=default", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "cache", "invalidate"] }
+          }
+        },
+        {
+          "name": "POST Cache Clear (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "" },
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/cache/clear", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "cache", "clear"] }
+          }
+        },
+        {
+          "name": "GET Selector Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/scrapers/selectors/google_maps", "host": ["{{baseUrl}}"], "path": ["api", "v1", "scrapers", "selectors", "google_maps"] }
+          }
+        }
+      ],
+      "description": "Scraper management endpoints. Cache and selector endpoints require `ADMIN` role."
+    },
+    {
+      "name": "👤 Social Profiles",
+      "item": [
+        {
+          "name": "GET Social Profile by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns social profile\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/social-profiles/{{profileId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "social-profiles", "{{profileId}}"] }
+          }
+        }
+      ],
+      "description": "Social profile lookup endpoints."
+    },
+    {
+      "name": "🔧 Admin",
+      "item": [
+        {
+          "name": "GET Queue Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns queue stats\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.stats).to.have.property('discovery');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/queues", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "queues"] }
+          }
+        },
+        {
+          "name": "POST Retry Failed Jobs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Retry triggered\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.retried).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "" },
+            "url": { "raw": "{{baseUrl}}/api/v1/admin/queues/retry", "host": ["{{baseUrl}}"], "path": ["api", "v1", "admin", "queues", "retry"] }
+          }
+        }
+      ],
+      "description": "Admin endpoints for monitoring and managing queues. Requires `ADMIN` role.\n\n⚠️ Default users have `USER` role. To test admin endpoints, update the role:\n```sql\nUPDATE users SET role = 'ADMIN' WHERE email = 'your-email@example.com';\n```\nThen log in again for a fresh token."
+    }
+  ]
+}

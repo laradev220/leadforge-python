@@ -1,0 +1,153 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leadforge
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-discovery:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_discovery_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SCRAPER_CONCURRENCY: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-website:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_website_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SCRAPER_CONCURRENCY: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-contact:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_contact_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SCRAPER_CONCURRENCY: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-social:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_social_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SCRAPER_CONCURRENCY: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-scoring:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_scoring_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-export:
+    build:
+      context: ../..
+      dockerfile: workers/Dockerfile
+    command: ["python", "-m", "leadforge_export_worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/leadforge
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@postgres:5432/leadforge
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

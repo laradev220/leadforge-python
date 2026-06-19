@@ -1,0 +1,74 @@
+[project]
+name = "leadforge"
+version = "1.0.0"
+description = "Queue-driven enrichment pipeline for discovering, enriching, scoring, and exporting business leads"
+requires-python = ">=3.12,<3.13"
+readme = "README.md"
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "workers/discovery_worker",
+    "workers/website_worker",
+    "workers/contact_worker",
+    "workers/social_worker",
+    "workers/scoring_worker",
+    "workers/export_worker",
+    "packages/config",
+    "packages/shared",
+    "packages/database",
+    "packages/worker_core",
+    "packages/scraper_core",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "freezegun>=1.5",
+]
+
+[tool.uv.sources]
+leadforge-config = { workspace = true }
+leadforge-shared = { workspace = true }
+leadforge-database = { workspace = true }
+leadforge-worker-core = { workspace = true }
+leadforge-scraper-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "integration: integration tests requiring real services",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "ASYNC", "S", "C4", "DTZ", "PT", "RET", "SIM", "TID", "ARG", "PL", "RUF"]
+ignore = ["S101", "PLR0913", "PLR2004", "ARG002", "ARG003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "PLR2004", "ARG", "N802", "N803"]
+"alembic/*" = ["E", "F"]
+
+[tool.mypy]
+python_version = "3.12"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true

@@ -1,0 +1,20 @@
+[project]
+name = "social-worker"
+version = "1.0.0"
+description = "Social profile discovery worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "arq>=0.26",
+    "leadforge-config",
+    "leadforge-database",
+    "leadforge-shared",
+    "leadforge-worker-core",
+    "leadforge-scraper-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_social_worker"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,115 @@
+# Per-site selector configuration for DirectoryStrategy.
+# Each source has an ordered list of CSS selectors and XPath selectors.
+# The first selector that returns a non-empty result wins.
+# If all selectors fail, the strategy logs a failure for each.
+
+sources:
+  yellowpages_pk:
+    name:
+      - css: ".business-listing h2, .result .title, .listing .name"
+      - css: "h2.title, .listing-title"
+      - xpath: "//div[contains(@class,'listing')]//h2"
+      - css: ".entry-title"
+    link:
+      - css: ".business-listing a[href*='/biz/'], .result a[href*='/biz/']"
+      - css: "a.business-name"
+      - xpath: "//a[contains(@href,'/biz/')]"
+    phone:
+      - css: ".business-phone, .phone"
+      - css: "[data-type='phone']"
+      - xpath: "//span[contains(@class,'phone')]"
+    address:
+      - css: ".address, .business-address"
+      - css: "[class*='address']"
+      - xpath: "//div[contains(@class,'address')]"
+
+  hotfrog_pk:
+    name:
+      - css: ".business-listing .title, .listing h3"
+      - css: ".company-name"
+      - xpath: "//div[contains(@class,'listing')]//h3"
+    link:
+      - css: ".business-listing a, .listing a"
+      - xpath: "//div[contains(@class,'listing')]//a"
+    phone:
+      - css: ".phone-number, .tel"
+      - xpath: "//span[contains(@class,'phone')]"
+    address:
+      - css: ".address"
+      - xpath: "//div[contains(@class,'address')]"
+
+  cybo_pk:
+    name:
+      - css: ".business-listing .title, .listing h2"
+      - css: ".company-name"
+      - xpath: "//div[contains(@class,'listing')]//h2"
+    link:
+      - css: "a[href*='/biz/']"
+      - xpath: "//a[contains(@href,'/biz/')]"
+    address:
+      - css: ".address"
+
+  kompass_pk:
+    name:
+      - css: ".company-item h3, .result .company-name"
+      - css: ".companyName"
+      - xpath: "//div[contains(@class,'company')]//h3"
+    link:
+      - css: "a[href*='/company/']"
+      - xpath: "//a[contains(@href,'/company/')]"
+    address:
+      - css: ".address, .company-address"
+
+  yelp:
+    name:
+      - css: "[data-testid='businessName'], .businessName"
+      - css: "a[href*='/biz/'] h4"
+      - css: ".css-1m051bw"
+      - css: "h4.css-1m051bw"
+    link:
+      - css: "a[href*='/biz/']"
+      - xpath: "//a[contains(@href,'/biz/')]"
+    phone:
+      - css: "[data-testid='phone']"
+      - css: ".phone"
+    address:
+      - css: "[data-testid='address']"
+      - css: ".address"
+
+  yell_uk:
+    name:
+      - css: ".businessCapsule__name, .capsule__name"
+      - css: "h2.businessName a"
+      - css: "a[href*='/biz/']"
+      - css: "[class*='businessName']"
+    link:
+      - css: "a[href*='/biz/']"
+      - xpath: "//a[contains(@href,'/biz/')]"
+    phone:
+      - css: "[class*='phone'], .tel"
+    address:
+      - css: "[class*='address']"
+
+  google_maps:
+    name:
+      - css: "h1"
+      - css: "[data-item-id='title']"
+      - xpath: "//h1[contains(@class,'title')]"
+    phone:
+      - css: "button[data-tooltip*='phone']"
+      - css: "[data-item-id*='phone']"
+      - css: "button[aria-label*='phone']"
+    website:
+      - css: "a[data-tooltip*='website']"
+      - css: "a[data-item-id*='authority']"
+      - css: "a[aria-label*='website']"
+    address:
+      - css: "button[data-tooltip*='address']"
+      - css: "[data-item-id*='address']"
+    rating:
+      - css: "[aria-hidden*='star']"
+      - css: ".fontDisplayLarge"
+      - css: "[class*='rating'] span"
+    reviews:
+      - css: "button[aria-label*='reviews']"
+      - css: "span[aria-label*='review']"

@@ -1,0 +1,20 @@
+[project]
+name = "contact-worker"
+version = "1.0.0"
+description = "Contact extraction worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "arq>=0.26",
+    "leadforge-config",
+    "leadforge-database",
+    "leadforge-shared",
+    "leadforge-worker-core",
+    "leadforge-scraper-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_contact_worker"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
