@@ -30,6 +30,7 @@ dev-dependencies = [
     "ruff>=0.6",
     "mypy>=1.11",
     "freezegun>=1.5",
+    "alembic>=1.13",
 ]
 
 [tool.uv.sources]
@@ -103,3 +104,4 @@ python_version = "3.12"
 strict_optional = true
 warn_unused_ignores = true
 ignore_missing_imports = true
+disable_error_code = ["unused-ignore"]

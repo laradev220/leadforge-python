@@ -514,6 +514,7 @@ source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "alembic" },
     { name = "freezegun" },
     { name = "httpx" },
     { name = "mypy" },
@@ -527,6 +528,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "alembic", specifier = ">=1.13" },
     { name = "freezegun", specifier = ">=1.5" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.11" },
