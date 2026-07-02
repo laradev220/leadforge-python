@@ -59,6 +59,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --all-packages --frozen
+      - name: Install Playwright browsers
+        run: uv run playwright install chromium --with-deps
       - name: Run migrations
         env:
           DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/leadforge

@@ -201,11 +201,12 @@ class TestSocialCrawlingFixes:
                     mock_business.name = "Test Business"
                     mock_session.return_value.__aenter__.return_value.execute.return_value.scalar_one_or_none.return_value = mock_business
 
-                    # Should not raise exception, should handle gracefully
-                    await social_processor(data, logger)
+                    with patch("leadforge_social_worker.main.enqueue_job"):
+                        # Should not raise exception, should handle gracefully
+                        await social_processor(data, logger)
 
-                    # Verify error was logged (crawl failed)
-                    logger.error.assert_called()
+                        # Verify error was logged (crawl failed)
+                        logger.error.assert_called()
 
     @pytest.mark.asyncio
     async def test_social_platform_centralization(self):
