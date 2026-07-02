@@ -15,7 +15,7 @@ async def get_queue_stats() -> dict[str, dict[str, int]]:
         stats: dict[str, dict[str, int]] = {}
         for name in _QUEUE_NAMES:
             counts = {
-                "waiting": int(await client.llen(f"arq:queue:{name}")),
+                "waiting": int(await client.llen(f"arq:queue:{name}") or 0),  # type: ignore[misc]
                 "in_progress": int(await client.zcard(f"arq:in-progress:{name}") or 0),
                 "complete": int(await client.zcard(f"arq:result:{name}") or 0),
                 "failed": int(await client.zcard(f"arq:failed:{name}") or 0),

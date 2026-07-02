@@ -55,7 +55,7 @@ async def cache_stats(_admin: AdminUser) -> dict[str, Any]:
 async def cache_invalidate(
     url: str,
     user_agent: str = "default",
-    _admin: AdminUser = None,
+    _admin: AdminUser | None = None,
 ) -> dict[str, Any]:
     """Force invalidate a cached page (e.g., after selector degradation). Admin only."""
     # _admin: AdminUser is a FastAPI dependency injected via Depends(require_admin)
@@ -92,7 +92,7 @@ async def cache_clear(_admin: AdminUser) -> dict[str, Any]:
 @router.get("/selectors/{source}")
 async def get_selector_stats(
     source: str,
-    _admin: AdminUser = None,
+    _admin: AdminUser | None = None,
 ) -> dict[str, Any]:
     """Return selector health stats for a source. Admin only."""
     # _admin: AdminUser is a FastAPI dependency injected via Depends(require_admin)

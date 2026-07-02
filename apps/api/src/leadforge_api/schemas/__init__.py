@@ -9,7 +9,6 @@ from uuid import UUID
 from leadforge_shared.types import (
     ContactSource,
     ContactType,
-    EnrichmentStatus,
     ExportFormat,
     LeadGrade,
     SearchJobStatus,

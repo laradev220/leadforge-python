@@ -61,10 +61,41 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "ASYNC", "S", "C4", "DTZ", "PT", "RET", "SIM", "TID", "ARG", "PL", "RUF"]
-ignore = ["S101", "S104", "S110", "S311", "S112", "PLR0911", "PLR0913", "PLR0912", "PLR0915", "PLR2004", "PLC0415", "PLW0603", "PLW2901", "ARG001", "ARG002", "ARG003", "ASYNC230", "ASYNC240", "ASYNC250", "ASYNC109", "E501", "DTZ003", "B904", "SIM102", "SIM117", "RUF002", "RUF003", "RUF012", "RUF060", "F823", "F401"]
+ignore = [
+    "S101",     # assert used in tests
+    "S104",     # possible binding to all interfaces
+    "S110",     # try-except-pass (intentional for resilience)
+    "S112",     # try-except-continue
+    "S311",     # random used for non-crypto
+    "PLR0911",  # too many return statements
+    "PLR0912",  # too many branches
+    "PLR0913",  # too many arguments
+    "PLR0915",  # too many statements
+    "PLR2004",  # magic values
+    "PLC0415",  # local imports (intentional for circular dep avoidance)
+    "PLW0603",  # global statement
+    "PLW2901",  # redefined loop variable
+    "ARG001",   # unused function argument (api contracts)
+    "ARG002",   # unused method argument (api contracts)
+    "ARG003",   # unused class attribute argument
+    "ASYNC109", # async timeout
+    "ASYNC230", # async file operations
+    "ASYNC240", # async database operations
+    "ASYNC250", # async redis operations
+    "DTZ003",   # datetime without timezone
+    "E501",     # line too long
+    "B904",     # raise without from in except
+    "SIM102",   # collapsible if
+    "SIM117",   # multiple with statements
+    "RUF002",   # ambiguous unicode character
+    "RUF003",   # ambiguous unicode character in comment
+    "RUF012",   # mutable class attribute
+    "RUF060",   # invalid function override
+    "F811",     # redefined name from outer scope
+]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S", "PLR2004", "ARG", "N802", "N803", "PLC0415"]
+"tests/*" = ["S", "PLR2004", "ARG", "N802", "N803"]
 "alembic/*" = ["E", "F"]
 
 [tool.mypy]
@@ -72,6 +103,3 @@ python_version = "3.12"
 strict_optional = true
 warn_unused_ignores = true
 ignore_missing_imports = true
-disallow_untyped_defs = false
-check_untyped_defs = false
-disable_error_code = ["assignment", "arg-type", "union-attr", "attr-defined", "misc", "return-value", "valid-type", "override", "index", "unused-ignore"]

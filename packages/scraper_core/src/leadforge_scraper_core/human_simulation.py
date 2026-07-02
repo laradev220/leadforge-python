@@ -14,6 +14,7 @@ import math
 import random
 import secrets
 import time
+from typing import Literal
 
 from playwright.async_api import Page
 
@@ -136,7 +137,7 @@ async def human_click(
     end_x: float,
     end_y: float,
     *,
-    button: str = "left",
+    button: Literal["left", "middle", "right"] = "left",
 ) -> None:
     """Move the mouse to *end_x, end_y* with a human-like path, then click.
 

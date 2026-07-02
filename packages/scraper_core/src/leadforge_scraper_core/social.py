@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -358,7 +359,7 @@ def _extract_youtube(html: str) -> RichProfileData:
     return data
 
 
-_EXTRACTORS: dict[str, callable] = {
+_EXTRACTORS: dict[str, Callable] = {
     "FACEBOOK": _extract_facebook,
     "INSTAGRAM": _extract_instagram,
     "LINKEDIN": _extract_linkedin,
@@ -423,9 +424,8 @@ async def scrape_social_profile_for_contacts(
             return result
 
         result.update(_extract_emails(html))
-        result.update(
-            _extract_phones(HTMLParser(html).body.text() if HTMLParser(html).body else "")
-        )
+        body = HTMLParser(html).body
+        result.update(_extract_phones(body.text() if body else ""))
         result.update(_extract_website(html, profile_url, platform))
 
         if result:

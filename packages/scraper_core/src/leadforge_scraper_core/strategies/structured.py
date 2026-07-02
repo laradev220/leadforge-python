@@ -140,8 +140,8 @@ class StructuredDataStrategy(ExtractionStrategy):
         """Extract all og:meta properties."""
         data = {}
         for meta in tree.css('meta[property^="og:"]'):
-            prop = meta.attrs.get("property", "")[3:]  # strip "og:"
-            content = meta.attrs.get("content", "")
+            prop = (meta.attrs.get("property") or "")[3:]  # strip "og:"
+            content = meta.attrs.get("content") or ""
             if prop and content:
                 data[prop] = content
         return data
@@ -157,10 +157,10 @@ class StructuredDataStrategy(ExtractionStrategy):
         """Find all itemtype=Schema.org nodes and extract their properties."""
         data = {}
         for item in tree.css("[itemscope][itemtype]"):
-            typename = item.attrs.get("itemtype", "").split("/")[-1]
+            typename = (item.attrs.get("itemtype") or "").split("/")[-1]
             props = {}
             for prop_el in item.css("[itemprop]"):
-                prop_name = prop_el.attrs.get("itemprop", "")
+                prop_name = prop_el.attrs.get("itemprop") or ""
                 tag = prop_el.tag
                 if tag == "meta":
                     val = prop_el.attrs.get("content", "")

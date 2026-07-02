@@ -18,7 +18,7 @@ import structlog
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, SocialProfile
-from leadforge_scraper_core import extract_social_profiles, scrape_social_profile_rich
+from leadforge_scraper_core import extract_social_profiles
 from leadforge_scraper_core.social_platforms import get_social_platform_search_terms
 from leadforge_shared.types import SocialJobData
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
@@ -364,6 +364,9 @@ async def _scrape_profile(
     use_cdp: bool = True,
 ) -> dict:
     """Scrape a single profile for contacts + rich data."""
+    from leadforge_scraper_core.base import fetch_html
+    from leadforge_scraper_core.social import scrape_social_profile_rich
+
     if use_cdp and browser:
         async with browser.tab_context(sp.profile_url) as tab:
             await asyncio.sleep(1.5 + secrets.randbelow(3))
@@ -373,9 +376,6 @@ async def _scrape_profile(
         return {}
 
     # Fallback: httpx/Playwright — fetch HTML then use rich scraper
-    from leadforge_scraper_core.base import fetch_html
-    from leadforge_scraper_core.social import scrape_social_profile_rich
-
     log = logger.bind(platform=sp.platform, url=sp.profile_url)
     try:
         html = await fetch_html(

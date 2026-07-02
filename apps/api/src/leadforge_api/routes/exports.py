@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Response
 from fastapi.responses import FileResponse
+from leadforge_database.models import ExportFormat
 
 from leadforge_api.core.deps import CurrentUserId, DBSession
 from leadforge_api.core.response import success
@@ -19,7 +20,9 @@ router = APIRouter(prefix="/exports", tags=["exports"])
 async def create_export(
     body: CreateExportRequest, user_id: CurrentUserId, session: DBSession
 ) -> dict:
-    exp = await export_service.create_export(session, user_id, body.format, body.filters or {})
+    exp = await export_service.create_export(
+        session, user_id, ExportFormat(body.format.value), body.filters or {}
+    )
     return success(CreateExportResponse(export_id=exp.id).model_dump(mode="json"))
 
 

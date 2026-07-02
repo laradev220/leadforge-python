@@ -25,7 +25,7 @@ class GlobalConcurrencyLimiter:
     @property
     def available(self) -> int:
         """Number of available concurrent slots (approximate)."""
-        return self._semaphore._value  # type: ignore[attr-defined]
+        return self._semaphore._value
 
 
 class DomainRateLimiter:

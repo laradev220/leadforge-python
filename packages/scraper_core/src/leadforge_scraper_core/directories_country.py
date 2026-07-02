@@ -184,23 +184,23 @@ async def _search_directory(
                 rating = None
                 if rating_el:
                     with contextlib.suppress(AttributeError, ValueError):
-                        rating = float(
-                            re.search(
-                                r"[\d.]+",
-                                rating_el.text(strip=True),
-                            ).group(0)
+                        match = re.search(
+                            r"[\d.]+",
+                            rating_el.text(strip=True),
                         )
+                        if match:
+                            rating = float(match.group(0))
 
                 reviews_el = container.css_first("[class*='review'], [itemprop='reviewCount']")
                 review_count = None
                 if reviews_el:
                     with contextlib.suppress(AttributeError, ValueError):
-                        review_count = int(
-                            re.search(
-                                r"[\d,]+",
-                                reviews_el.text(strip=True).replace(",", ""),
-                            ).group(0)
+                        match = re.search(
+                            r"[\d,]+",
+                            reviews_el.text(strip=True).replace(",", ""),
                         )
+                        if match:
+                            review_count = int(match.group(0))
 
                 biz = MapsBusiness(
                     external_id=make_ext_id(source_label, name),

@@ -331,7 +331,7 @@ async def _do_fetch(
             }
             # Apply proxy if available
             if proxy:
-                context_options["proxy"] = {"server": proxy}  # type: ignore[assignment]
+                context_options["proxy"] = {"server": proxy}
 
             context = await browser.new_context(**context_options)
             page = await context.new_page()

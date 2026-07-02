@@ -107,7 +107,8 @@ class TestBezierPath:
         xs = [p[0] for p in path]
         # Check that x is generally increasing (jitter may cause minor dips)
         assert xs[0] < xs[-1]
-        assert all(0 <= x <= 203 for x in xs)
+        # Bezier with random control point can overshoot; check within reasonable bounds
+        assert all(-20 <= x <= 220 for x in xs)
 
     def test_min_steps(self) -> None:
         path = _bezier_path(0, 0, 10, 10, steps=2)

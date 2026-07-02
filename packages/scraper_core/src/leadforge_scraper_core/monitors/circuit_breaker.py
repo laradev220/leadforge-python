@@ -66,7 +66,7 @@ class CircuitBreaker:
         recent = [t for t in self._failures if t > cutoff]
         return len(recent) / (self.config.window_seconds / 60.0)
 
-    async def _redis_key(self) -> tuple[str, str, str]:
+    async def _redis_key(self) -> tuple[str, str, str, redis.Redis]:
         settings = get_settings()
         client = redis.Redis(
             host=settings.redis_host,
@@ -89,7 +89,7 @@ class CircuitBreaker:
             if opened_val:
                 self._opened_at = float(opened_val)
             # Load failures
-            raw = await client.lrange(failures_key, 0, -1)
+            raw = await client.lrange(failures_key, 0, -1)  # type: ignore[misc]
             self._failures = [float(t) for t in raw]
             await client.aclose()
         except Exception:

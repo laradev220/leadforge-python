@@ -194,9 +194,7 @@ class TestSocialCrawlingFixes:
         logger = MagicMock()
 
         # Mock the internal HTTP fetch to raise an exception
-        with patch(
-            "leadforge_scraper_core.base.fetch_html", side_effect=Exception("Crawl failed")
-        ):
+        with patch("leadforge_scraper_core.base.fetch_html", side_effect=Exception("Crawl failed")):
             with patch("leadforge_social_worker.main._search_social_by_name", return_value=[]):
                 with patch("leadforge_social_worker.main.get_session_ctx") as mock_session:
                     mock_business = MagicMock()

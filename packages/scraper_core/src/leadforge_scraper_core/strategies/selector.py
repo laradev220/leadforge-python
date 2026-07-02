@@ -162,7 +162,7 @@ class SelectorStrategy(ExtractionStrategy):
 
             parser = tree
             # selectolax doesn't support XPath directly, so we use lxml
-            root = etree.HTML(parser.html.encode())
+            root = etree.HTML((parser.html or "").encode())
             els = root.xpath(xpath)
             if not els:
                 return None

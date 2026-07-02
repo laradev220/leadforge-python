@@ -70,13 +70,13 @@ class SelectorTracker:
             stats_key = self._stats_key(source, field)
 
             # Get current stats
-            stats_raw = await client.hget(stats_key, selector)
+            stats_raw = await client.hget(stats_key, selector)  # type: ignore[misc]
             successes, failures, streak = self._parse_stats(stats_raw)
 
             successes += 1
             streak = max(0, streak - 1) if streak > 0 else 0  # reset negative streak on success
 
-            await client.hset(stats_key, selector, f"{successes},{failures},{streak}")
+            await client.hset(stats_key, selector, f"{successes},{failures},{streak}")  # type: ignore[misc]
             await client.expire(stats_key, self._TTL_SECONDS)
             await client.aclose()
         except Exception:
@@ -99,13 +99,13 @@ class SelectorTracker:
             client = await self._get_client()
             stats_key = self._stats_key(source, field)
 
-            stats_raw = await client.hget(stats_key, selector)
+            stats_raw = await client.hget(stats_key, selector)  # type: ignore[misc]
             successes, failures, streak = self._parse_stats(stats_raw)
 
             failures += 1
             streak += 1
 
-            await client.hset(stats_key, selector, f"{successes},{failures},{streak}")
+            await client.hset(stats_key, selector, f"{successes},{failures},{streak}")  # type: ignore[misc]
             await client.expire(stats_key, self._TTL_SECONDS)
 
             # Check threshold
@@ -137,7 +137,7 @@ class SelectorTracker:
     ) -> None:
         """Mark a selector as deprecated in Redis and invalidate its cache entry."""
         deprecated_key = f"{self._PREFIX}:deprecated:{source}:{field}"
-        await client.hset(deprecated_key, selector, int(time.time()))
+        await client.hset(deprecated_key, selector, str(int(time.time())))  # type: ignore[misc]
         await client.expire(deprecated_key, self._TTL_SECONDS * 7)  # 1 week TTL
 
         # Invalidate cache so the next retry gets fresh HTML with working selectors
@@ -158,7 +158,7 @@ class SelectorTracker:
         try:
             client = await self._get_client()
             deprecated_key = f"{self._PREFIX}:deprecated:{source}:{field}"
-            val = await client.hget(deprecated_key, selector)
+            val = await client.hget(deprecated_key, selector)  # type: ignore[misc]
             await client.aclose()
             return val is not None
         except Exception:
@@ -184,7 +184,7 @@ class SelectorTracker:
             best = None
             best_ratio = -1.0
             for sel in valid:
-                raw = await client.hget(stats_key, sel)
+                raw = await client.hget(stats_key, sel)  # type: ignore[misc]
                 s, f, _ = self._parse_stats(raw)
                 total = s + f
                 if total > 0:

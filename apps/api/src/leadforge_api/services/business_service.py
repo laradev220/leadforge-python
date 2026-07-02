@@ -14,6 +14,7 @@ from leadforge_database.models import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from leadforge_api.core.errors import not_found
 from leadforge_api.core.queue import enqueue_website
@@ -32,7 +33,7 @@ async def list_businesses(
     page: int,
     limit: int,
 ) -> tuple[list[Business], int]:
-    where = []
+    where: list[ColumnElement[bool]] = []
     if name:
         where.append(Business.name.ilike(f"%{name}%"))
     if city:

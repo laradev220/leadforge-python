@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from typing import Any
@@ -64,7 +64,7 @@ class CDPBrowser:
         self._tab_websockets: dict[str, Any] = {}
         self._tab_message_ids: dict[str, int] = {}
         self._tab_responses: dict[str, dict[int, asyncio.Future]] = {}
-        self._event_handlers: dict[str, list[callable]] = {}
+        self._event_handlers: dict[str, list[Callable]] = {}
         self._connected = False
 
     async def __aenter__(self) -> CDPBrowser:
@@ -344,10 +344,13 @@ async def fetch_with_authenticated_session(
 ) -> str | None:
     """Fetch a URL using an authenticated Chrome session (creates new connection)."""
     try:
-        async with CDPBrowser.create(cdp_url=cdp_url, stealth=stealth) as browser:
+        browser = await CDPBrowser.create(cdp_url=cdp_url, stealth=stealth)
+        try:
             async with browser.tab_context(url) as tab:
                 await human_delay(min_ms=1000, max_ms=3000)
                 return await tab.get_html()
+        finally:
+            await browser.disconnect()
     except Exception as exc:
         logger.debug("fetch_auth_session.failed", url=url, error=str(exc))
         return None
@@ -371,6 +374,7 @@ async def scrape_social_profile(
         if own_browser:
             browser = await CDPBrowser.create(cdp_url=cdp_url)
 
+        assert browser is not None  # guaranteed by own_browser check above
         async with browser.tab_context(profile_url) as tab:
             await human_delay(min_ms=1500, max_ms=4000)
             html = await tab.get_html()
