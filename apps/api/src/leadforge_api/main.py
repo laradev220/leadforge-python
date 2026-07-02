@@ -65,6 +65,11 @@ app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(scrapers_router, prefix="/api/v1")
 
 
+@app.get("/")
+async def root() -> dict:
+    return {"success": True, "service": "leadforge-api"}
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"success": True, "service": "leadforge-api"}
