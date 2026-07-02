@@ -53,9 +53,9 @@ async def cache_stats(_admin: AdminUser) -> dict[str, Any]:
 
 @router.post("/cache/invalidate")
 async def cache_invalidate(
+    _admin: AdminUser,
     url: str,
     user_agent: str = "default",
-    _admin: AdminUser,
 ) -> dict[str, Any]:
     """Force invalidate a cached page (e.g., after selector degradation). Admin only."""
     # _admin: AdminUser is a FastAPI dependency injected via Depends(require_admin)
