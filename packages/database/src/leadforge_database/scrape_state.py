@@ -12,7 +12,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
-    Enum as SAEnum,
     ForeignKey,
     Index,
     Integer,
@@ -20,13 +19,17 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from leadforge_database.models import Base
 
 
-class ScrapeStateStatus(str, enum.Enum):
+class ScrapeStateStatus(enum.StrEnum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -62,7 +65,11 @@ class ScrapeState(Base):
     # because SQLAlchemy 2.0 serializes list to JSON automatically.
     # Status
     status: Mapped[ScrapeStateStatus] = mapped_column(
-        SAEnum(ScrapeStateStatus, name="scrape_state_status", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            ScrapeStateStatus,
+            name="scrape_state_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=ScrapeStateStatus.IN_PROGRESS,
         nullable=False,
     )
@@ -79,7 +86,10 @@ class ScrapeState(Base):
         # Unique idempotency constraint
         Index(
             "ix_scrape_states_idempotency",
-            "search_job_id", "source", "keyword", "location",
+            "search_job_id",
+            "source",
+            "keyword",
+            "location",
             unique=True,
         ),
         Index("ix_scrape_states_search_job_id", "search_job_id"),

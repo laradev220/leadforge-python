@@ -16,6 +16,7 @@ Designed to handle 5–10 requests/hour without proxies.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
 import re
@@ -230,10 +231,8 @@ async def _collect_place_urls(page: Page, max_scrolls: int = 8) -> list[dict[str
             else:
                 await human_scroll(page, scroll_dist, max_steps=scroll_steps)
         except Exception:
-            try:
+            with contextlib.suppress(Exception):
                 await page.evaluate(f"window.scrollBy(0, {scroll_dist})")
-            except Exception:
-                pass
 
         # Wait for new results to load
         await human_delay(2000, 5000, page=page)
@@ -332,10 +331,8 @@ async def _extract_feed_items(page: Page) -> list[dict[str, Any]]:
             # Try just stars: "4.5 stars"
             m = re.search(r"(\d+\.?\d*)\s*stars?$", label, re.I)
             if m:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     rating = float(m.group(1))
-                except (ValueError, TypeError):
-                    pass
                 break
             # Fallback: "4.7 (3,901)" format
             m2 = re.search(r"(\d+\.?\d*)\s*\(([\d,]+)\)", label)
@@ -357,7 +354,7 @@ async def _extract_feed_items(page: Page) -> list[dict[str, Any]]:
             if "·" in line:
                 parts = [p.strip() for p in line.split("·") if p.strip()]
                 if parts:
-                    category = parts[0] if not category else category
+                    category = category if category else parts[0]
                     for p in reversed(parts):
                         if p and not re.match(r"^(Open|Closed|Closes)", p, re.I):
                             address = p
@@ -555,10 +552,8 @@ def _make_maps_business(data: dict[str, Any], url: str) -> MapsBusiness:
     lat, lon = None, None
     coord_match2 = re.search(r"@(-?[\d.]+),(-?[\d.]+)", url)
     if coord_match2:
-        try:
+        with contextlib.suppress(Exception):
             lat, lon = float(coord_match2.group(1)), float(coord_match2.group(2))
-        except Exception:
-            pass
 
     return MapsBusiness(
         external_id=external_id,

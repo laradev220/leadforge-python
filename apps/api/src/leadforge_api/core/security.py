@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 import bcrypt
 import jwt
-
 from leadforge_config import get_settings
 
 
@@ -25,7 +24,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def create_access_token(user_id: UUID, email: str) -> str:
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "id": str(user_id),

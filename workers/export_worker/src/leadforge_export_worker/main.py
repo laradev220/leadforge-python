@@ -4,22 +4,17 @@ import csv
 import json
 from pathlib import Path
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import (
     Business,
-    Contact,
     Export,
     LeadScore,
-    SocialProfile,
-    Website,
 )
 from leadforge_shared.types import ExportJobData
-from leadforge_worker_core.core import WorkerWrapper, get_arq_pool
+from leadforge_worker_core.core import WorkerWrapper
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 
 async def export_processor(data: ExportJobData, logger):
@@ -41,6 +36,7 @@ async def export_processor(data: ExportJobData, logger):
         # by the current API. Fall back to exp.filters for backward compatibility
         # with queued jobs created before the filters column was added.
         from sqlalchemy import and_
+
         filters = data.filters
         where_clauses = []
         if filters:
@@ -52,48 +48,55 @@ async def export_processor(data: ExportJobData, logger):
                 where_clauses.append(LeadScore.grade == filters["grade"])
             if filters.get("website_status"):
                 from leadforge_database.models import WebsiteStatus
-                where_clauses.append(Business.website_status == WebsiteStatus(filters["website_status"]))
+
+                where_clauses.append(
+                    Business.website_status == WebsiteStatus(filters["website_status"])
+                )
             if filters.get("city"):
                 where_clauses.append(Business.city.ilike(f"%{filters['city']}%"))
             if filters.get("country"):
                 where_clauses.append(Business.country == filters["country"])
             if filters.get("best_contact_method"):
-                where_clauses.append(LeadScore.best_contact_method == filters["best_contact_method"])
+                where_clauses.append(
+                    LeadScore.best_contact_method == filters["best_contact_method"]
+                )
 
         if where_clauses:
             query = query.where(and_(*where_clauses))
 
         result = await session.execute(
-            query
-            .options(
+            query.options(
                 selectinload(Business.lead_score),
                 selectinload(Business.website),
                 selectinload(Business.contacts),
                 selectinload(Business.social_profiles),
-            )
-            .order_by(Business.created_at.desc())
+            ).order_by(Business.created_at.desc())
         )
         businesses = result.scalars().all()
 
         rows = []
         for b in businesses:
-            rows.append({
-                "id": str(b.id),
-                "name": b.name,
-                "category": b.category or "",
-                "city": b.city or "",
-                "country": b.country or "",
-                "phone": b.phone or "",
-                "rating": b.rating or "",
-                "review_count": b.review_count or 0,
-                "website_status": b.website_status.value,
-                "website_url": b.website.url if b.website else "",
-                "lead_score": b.lead_score.score if b.lead_score else 0,
-                "grade": b.lead_score.grade if b.lead_score else "",
-                "best_contact": b.lead_score.best_contact_method if b.lead_score else "",
-                "contacts": "; ".join([f"{c.type.value}:{c.value}" for c in b.contacts]),
-                "socials": "; ".join([f"{p.platform.value}:{p.profile_url}" for p in b.social_profiles]),
-            })
+            rows.append(
+                {
+                    "id": str(b.id),
+                    "name": b.name,
+                    "category": b.category or "",
+                    "city": b.city or "",
+                    "country": b.country or "",
+                    "phone": b.phone or "",
+                    "rating": b.rating or "",
+                    "review_count": b.review_count or 0,
+                    "website_status": b.website_status.value,
+                    "website_url": b.website.url if b.website else "",
+                    "lead_score": b.lead_score.score if b.lead_score else 0,
+                    "grade": b.lead_score.grade if b.lead_score else "",
+                    "best_contact": b.lead_score.best_contact_method if b.lead_score else "",
+                    "contacts": "; ".join([f"{c.type.value}:{c.value}" for c in b.contacts]),
+                    "socials": "; ".join(
+                        [f"{p.platform.value}:{p.profile_url}" for p in b.social_profiles]
+                    ),
+                }
+            )
 
         settings = get_settings()
         export_dir = Path(settings.export_dir)
@@ -141,6 +144,7 @@ async def export(ctx: dict, export_id: str) -> None:
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
     import time
+
     from arq import Worker
     from arq.connections import RedisSettings
 
@@ -150,9 +154,7 @@ def main():
             worker_instance = Worker(
                 functions=[export],
                 queue_name="export",
-                redis_settings=RedisSettings(
-                    host=settings.redis_host, port=settings.redis_port
-                ),
+                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port),
                 max_jobs=settings.scraper_concurrency,
             )
             worker_instance.run()

@@ -73,7 +73,11 @@ class RegexStrategy(ExtractionStrategy):
 
     # Patterns that are clearly not business contacts
     _DISCARD_EMAILS = {
-        "noreply", "no-reply", "donotreply", "example", "test",
+        "noreply",
+        "no-reply",
+        "donotreply",
+        "example",
+        "test",
     }
 
     # Regex for phone: matches common formats including +1 (555) 123-4567
@@ -101,8 +105,14 @@ class RegexStrategy(ExtractionStrategy):
             # Skip freemail domains that are rarely business contacts
             domain = email_lower.split("@")[1]
             if domain in {
-                "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
-                "icloud.com", "mail.com", "aol.com", "protonmail.com",
+                "gmail.com",
+                "yahoo.com",
+                "hotmail.com",
+                "outlook.com",
+                "icloud.com",
+                "mail.com",
+                "aol.com",
+                "protonmail.com",
             }:
                 continue
             seen.add(email_lower)
@@ -158,15 +168,15 @@ class RegexStrategy(ExtractionStrategy):
     # Match social profile URLs in href attributes and text
     # Use single-backslash escapes in raw strings for regex metacharacters
     _SOCIAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-        (re.compile(r'facebook\.com/([a-zA-Z0-9._-]+)', re.I), "facebook"),
-        (re.compile(r'(?:instagram\.com|instagr\.am)/([a-zA-Z0-9._-]+)', re.I), "instagram"),
-        (re.compile(r'linkedin\.com/in/([a-zA-Z0-9._-]+)', re.I), "linkedin"),
-        (re.compile(r'linkedin\.com/company/([a-zA-Z0-9._-]+)', re.I), "linkedin"),
-        (re.compile(r'twitter\.com/([a-zA-Z0-9._-]+)', re.I), "twitter"),
-        (re.compile(r'x\.com/([a-zA-Z0-9._-]+)', re.I), "twitter"),
-        (re.compile(r'youtube\.com/@([a-zA-Z0-9._-]+)', re.I), "youtube"),
-        (re.compile(r'youtube\.com/(?:channel/|c/)([a-zA-Z0-9._-]+)', re.I), "youtube"),
-        (re.compile(r'tiktok\.com/@([a-zA-Z0-9._-]+)', re.I), "tiktok"),
+        (re.compile(r"facebook\.com/([a-zA-Z0-9._-]+)", re.I), "facebook"),
+        (re.compile(r"(?:instagram\.com|instagr\.am)/([a-zA-Z0-9._-]+)", re.I), "instagram"),
+        (re.compile(r"linkedin\.com/in/([a-zA-Z0-9._-]+)", re.I), "linkedin"),
+        (re.compile(r"linkedin\.com/company/([a-zA-Z0-9._-]+)", re.I), "linkedin"),
+        (re.compile(r"twitter\.com/([a-zA-Z0-9._-]+)", re.I), "twitter"),
+        (re.compile(r"x\.com/([a-zA-Z0-9._-]+)", re.I), "twitter"),
+        (re.compile(r"youtube\.com/@([a-zA-Z0-9._-]+)", re.I), "youtube"),
+        (re.compile(r"youtube\.com/(?:channel/|c/)([a-zA-Z0-9._-]+)", re.I), "youtube"),
+        (re.compile(r"tiktok\.com/@([a-zA-Z0-9._-]+)", re.I), "tiktok"),
     ]
 
     def _extract_social(self, html: str) -> dict[str, str]:

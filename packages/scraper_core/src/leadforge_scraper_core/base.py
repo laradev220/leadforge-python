@@ -12,30 +12,28 @@ This module replaces the original base.py. Key improvements:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import random
 import time
 from typing import Any
 
 import httpx
+from leadforge_config import get_settings
+from playwright.async_api import async_playwright
 from tenacity import (
     after_log,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
 )
-from playwright.async_api import async_playwright
 
-from leadforge_config import get_settings
-from leadforge_scraper_core.exceptions import RateLimitError, ProxyError
-from leadforge_scraper_core.monitors.rate_limiter import (
-    GlobalConcurrencyLimiter,
-    AdaptiveRateLimiter,
-)
-from leadforge_scraper_core.monitors.proxy_rotator import get_proxy_manager
 from leadforge_scraper_core.cache import get_cache
-
+from leadforge_scraper_core.exceptions import ProxyError, RateLimitError
+from leadforge_scraper_core.monitors.proxy_rotator import get_proxy_manager
+from leadforge_scraper_core.monitors.rate_limiter import (
+    AdaptiveRateLimiter,
+    GlobalConcurrencyLimiter,
+)
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -54,6 +52,7 @@ _domain_limiter = AdaptiveRateLimiter(
 
 def _get_logger() -> Any:
     import structlog
+
     return structlog.get_logger("scraper.base")
 
 
@@ -63,12 +62,11 @@ def _is_retryable_exception(exc: Exception) -> bool:
         return True
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in (429, 500, 502, 503, 504)
-    if isinstance(exc, RateLimitError):
-        return True
-    return False
+    return bool(isinstance(exc, RateLimitError))
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def fetch_html(
     url: str,
@@ -152,9 +150,8 @@ async def fetch_html(
                     proxy_used=proxy,
                 )
                 return html
-            else:
-                scraper_metrics.record_scrape_failure(source, "empty_response", duration_ms)
-                return None
+            scraper_metrics.record_scrape_failure(source, "empty_response", duration_ms)
+            return None
 
         except RateLimitError as exc:
             duration_ms = int((time.monotonic() - start_time) * 1000)
@@ -163,9 +160,15 @@ async def fetch_html(
                 await _domain_limiter.note_429(domain)
             log.warning(
                 "fetch.rate_limited",
-                source=source, url=url, keyword=keyword, location=location,
-                duration_ms=duration_ms, success=False, retry_count=retry_count,
-                proxy_used=proxy, error=str(exc),
+                source=source,
+                url=url,
+                keyword=keyword,
+                location=location,
+                duration_ms=duration_ms,
+                success=False,
+                retry_count=retry_count,
+                proxy_used=proxy,
+                error=str(exc),
             )
             raise
 
@@ -177,9 +180,15 @@ async def fetch_html(
                 await proxy_manager.record_failure(proxy, exc)
             log.warning(
                 "fetch.proxy_failed",
-                source=source, url=url, keyword=keyword, location=location,
-                duration_ms=duration_ms, success=False, retry_count=retry_count,
-                proxy_used=proxy, error=str(exc),
+                source=source,
+                url=url,
+                keyword=keyword,
+                location=location,
+                duration_ms=duration_ms,
+                success=False,
+                retry_count=retry_count,
+                proxy_used=proxy,
+                error=str(exc),
             )
             raise
 
@@ -188,14 +197,21 @@ async def fetch_html(
             scraper_metrics.record_scrape_failure(source, "other", duration_ms)
             log.error(
                 "fetch.failed",
-                source=source, url=url, keyword=keyword, location=location,
-                duration_ms=duration_ms, success=False, retry_count=retry_count,
-                proxy_used=proxy, error=str(exc),
+                source=source,
+                url=url,
+                keyword=keyword,
+                location=location,
+                duration_ms=duration_ms,
+                success=False,
+                retry_count=retry_count,
+                proxy_used=proxy,
+                error=str(exc),
             )
             raise
 
 
 # ── Retry wrapper ─────────────────────────────────────────────────────────────
+
 
 def retrying_fetch(*, source: str = "unknown", keyword: str = "", location: str = ""):
     """Decorator that wraps fetch_html with tenacity retry logic.
@@ -216,7 +232,9 @@ def retrying_fetch(*, source: str = "unknown", keyword: str = "", location: str 
         r = retry(
             stop=stop_after_attempt(3),
             wait=wait_exponential_jitter(initial=1, max=10, jitter=2),
-            retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError, RateLimitError)),
+            retry=retry_if_exception_type(
+                (httpx.TimeoutException, httpx.NetworkError, RateLimitError)
+            ),
             after=after_log(log, logging.WARNING),
             reraise=True,
         )
@@ -239,6 +257,7 @@ def retrying_fetch(*, source: str = "unknown", keyword: str = "", location: str 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+
 async def _do_fetch(
     url: str,
     *,
@@ -260,7 +279,11 @@ async def _do_fetch(
     }
 
     if not use_playwright:
-        client_kwargs: dict[str, Any] = {"timeout": timeout, "follow_redirects": True, "headers": headers}
+        client_kwargs: dict[str, Any] = {
+            "timeout": timeout,
+            "follow_redirects": True,
+            "headers": headers,
+        }
         if proxy:
             client_kwargs["proxy"] = proxy
         try:
@@ -273,7 +296,11 @@ async def _do_fetch(
                 # Accept 200 OR 403 (CDN/WAF block pages may have useful content)
                 if response.status_code in (200, 403):
                     html = response.text
-                    if len(html) > 500 and "cf-browser-verification" not in html and "captcha" not in html.lower():
+                    if (
+                        len(html) > 500
+                        and "cf-browser-verification" not in html
+                        and "captcha" not in html.lower()
+                    ):
                         return html
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 429:
@@ -319,8 +346,7 @@ async def _do_fetch(
 
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=int(timeout * 1000))
-                content = await page.content()
-                return content
+                return await page.content()
             finally:
                 await browser.close()
     except Exception as exc:
@@ -334,6 +360,7 @@ def _extract_domain(url: str) -> str:
     """Extract domain from URL for rate limiting."""
     try:
         from urllib.parse import urlparse
+
         return urlparse(url).netloc.removeprefix("www.")
     except Exception:
         return ""

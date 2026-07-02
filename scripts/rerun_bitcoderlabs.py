@@ -14,11 +14,10 @@ from pathlib import Path
 #   uv run python scripts/rerun_bitcoderlabs.py
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import select
-
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, WebsiteStatus
 from leadforge_worker_core.core import enqueue_job
+from sqlalchemy import select
 
 
 async def main():
@@ -47,14 +46,14 @@ async def main():
 
             # Reset website status
             business.website_status = WebsiteStatus.UNKNOWN
-            print(f"  ✅ Reset website_status to UNKNOWN")
+            print("  ✅ Reset website_status to UNKNOWN")
 
         await session.commit()
-        print(f"\n✅ Database state reset complete!")
+        print("\n✅ Database state reset complete!")
 
     # Enqueue website jobs for each business
     print(f"\n{'=' * 60}")
-    print(f"Enqueuing worker jobs...")
+    print("Enqueuing worker jobs...")
     print(f"{'=' * 60}")
 
     for bid in business_ids:
@@ -65,18 +64,18 @@ async def main():
             name = business.name if business else bid
 
         print(f"\n  → {name}")
-        print(f"    Enqueuing website worker...")
+        print("    Enqueuing website worker...")
         await enqueue_job("website", "website", {"business_id": bid})
-        print(f"    ✅ website job enqueued!")
+        print("    ✅ website job enqueued!")
 
     print(f"\n{'=' * 60}")
-    print(f"✅ All jobs enqueued! Workers should process them shortly.")
+    print("✅ All jobs enqueued! Workers should process them shortly.")
     print(f"{'=' * 60}")
-    print(f"\nWorker pipeline that will run:")
-    print(f"  1. website worker  → analyzes/finds website")
-    print(f"  2. contact worker  → extracts contacts (from website + business record)")
-    print(f"  3. social worker   → discovers social profiles (from website + name search)")
-    print(f"  4. scoring worker  → recalculates lead score")
+    print("\nWorker pipeline that will run:")
+    print("  1. website worker  → analyzes/finds website")
+    print("  2. contact worker  → extracts contacts (from website + business record)")
+    print("  3. social worker   → discovers social profiles (from website + name search)")
+    print("  4. scoring worker  → recalculates lead score")
 
 
 if __name__ == "__main__":

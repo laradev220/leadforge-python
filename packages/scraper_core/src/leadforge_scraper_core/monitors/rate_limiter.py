@@ -123,6 +123,7 @@ class AdaptiveRateLimiter:
             self._current_delay[domain] = new_delay
             self._penalty_until[domain] = time.monotonic() + self._penalty_duration
             import structlog
+
             log = structlog.get_logger("scraper.rate_limiter")
             log.warning(
                 "rate_limit.backoff",

@@ -42,12 +42,12 @@ class SelectorStrategy(ExtractionStrategy):
         """Load selectors.yaml from disk, falling back to bundled file."""
         path = os.environ.get("SELECTORS_CONFIG_PATH", str(self._SELECTORS_PATH))
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         except FileNotFoundError:
             # Try bundled
             try:
-                with open(self._SELECTORS_PATH, "r", encoding="utf-8") as f:
+                with open(self._SELECTORS_PATH, encoding="utf-8") as f:
                     return yaml.safe_load(f) or {}
             except FileNotFoundError:
                 return {"sources": {}}
@@ -56,6 +56,7 @@ class SelectorStrategy(ExtractionStrategy):
         """Infer the source key from the URL hostname."""
         try:
             from urllib.parse import urlparse
+
             host = urlparse(url).netloc.removeprefix("www.")
         except Exception:
             host = ""
@@ -158,6 +159,7 @@ class SelectorStrategy(ExtractionStrategy):
         """Return text content of first XPath match (via lxml)."""
         try:
             from lxml import etree
+
             parser = tree
             # selectolax doesn't support XPath directly, so we use lxml
             root = etree.HTML(parser.html.encode())
@@ -185,11 +187,13 @@ class SelectorStrategy(ExtractionStrategy):
             setattr(result, attr, value)
         elif attr == "rating":
             import re
+
             nums = re.findall(r"[\f\t\n\r]*(\b[0-9.]+)", value)
             if nums:
                 result.rating = float(nums[0])
         elif attr == "review_count":
             import re
+
             nums = re.findall(r"\b([0-9,]+)\b", value.replace(",", ""))
             if nums:
                 result.review_count = int(nums[0])

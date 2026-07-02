@@ -5,14 +5,11 @@ Validates the critical bug fix: no duplicate PK key in SOURCE_REGISTRY.
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
-
 from leadforge_scraper_core.source_registry import (
     SOURCE_REGISTRY,
-    get_sources_for_country,
     get_registered_countries,
+    get_sources_for_country,
     register_source,
 )
 
@@ -122,6 +119,7 @@ class TestGetSourcesForCountry:
             assert callable(fn), f"{label} is not callable"
             # Should be an async function (coroutine)
             import asyncio
+
             assert asyncio.iscoroutinefunction(fn), f"{label} is not async"
 
     def test_default_has_only_google_and_osm(self) -> None:
@@ -164,9 +162,7 @@ class TestRegisterSource:
 
     def setup_method(self) -> None:
         """Save original registry state for cleanup."""
-        self._original = {
-            k: list(v) for k, v in SOURCE_REGISTRY.items()
-        }
+        self._original = {k: list(v) for k, v in SOURCE_REGISTRY.items()}
 
     def teardown_method(self) -> None:
         """Restore original registry state."""

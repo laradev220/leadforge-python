@@ -14,12 +14,11 @@ import math
 import random
 import secrets
 import time
-from typing import Any
 
 from playwright.async_api import Page
 
-
 # ── Timing ────────────────────────────────────────────────────────────────────
+
 
 def jitter(base_ms: int = 1000, variance_ms: int = 500) -> float:
     """Return a random delay in *seconds* with crypto-strength jitter.
@@ -52,9 +51,7 @@ async def human_delay(
     if page:
         try:
             # Use innerWidth/Height as reference and pick a random spot
-            viewport = await page.evaluate(
-                "() => ({w: window.innerWidth, h: window.innerHeight})"
-            )
+            viewport = await page.evaluate("() => ({w: window.innerWidth, h: window.innerHeight})")
             cx = viewport["w"] // 2
             cy = viewport["h"] // 2
             dx = secrets.randbelow(11) - 5  # -5 to +5 px
@@ -65,6 +62,7 @@ async def human_delay(
 
 
 # ── Mouse movements ───────────────────────────────────────────────────────────
+
 
 def _bezier_path(
     start_x: float,
@@ -91,21 +89,15 @@ def _bezier_path(
     for i in range(steps):
         t = i / (steps - 1)
         # Quadratic Bézier: B(t) = (1-t)²·P₀ + 2(1-t)t·P₁ + t²·P₂
-        x = (
-            (1 - t) ** 2 * start_x
-            + 2 * (1 - t) * t * ctrl_x
-            + t ** 2 * end_x
-        )
-        y = (
-            (1 - t) ** 2 * start_y
-            + 2 * (1 - t) * t * ctrl_y
-            + t ** 2 * end_y
-        )
+        x = (1 - t) ** 2 * start_x + 2 * (1 - t) * t * ctrl_x + t**2 * end_x
+        y = (1 - t) ** 2 * start_y + 2 * (1 - t) * t * ctrl_y + t**2 * end_y
         # Add micro-jitter to each point (real mice don't follow perfect curves)
-        points.append((
-            x + secrets.randbelow(5) - 2,
-            y + secrets.randbelow(5) - 2,
-        ))
+        points.append(
+            (
+                x + secrets.randbelow(5) - 2,
+                y + secrets.randbelow(5) - 2,
+            )
+        )
     return points
 
 
@@ -126,9 +118,7 @@ async def human_move_mouse(
                           cursor position from the browser.
     """
     if start_x is None or start_y is None:
-        pos = await page.evaluate(
-            "() => ({x: window.mouseX || 0, y: window.mouseY || 0})"
-        )
+        pos = await page.evaluate("() => ({x: window.mouseX || 0, y: window.mouseY || 0})")
         start_x = pos["x"] or 300 + secrets.randbelow(401)
         start_y = pos["y"] or 200 + secrets.randbelow(301)
 
@@ -158,6 +148,7 @@ async def human_click(
 
 
 # ── Scrolling ─────────────────────────────────────────────────────────────────
+
 
 async def human_scroll(
     page: Page,
@@ -244,6 +235,7 @@ async def human_type(page: Page, text: str, *, selector: str | None = None) -> N
 
 # ── Page interaction helpers ──────────────────────────────────────────────────
 
+
 async def simulate_reading(page: Page, seconds: float) -> None:
     """Simulate a human reading a page — occasional tiny scrolls and idle mouse moves."""
     end_time = time.monotonic() + seconds
@@ -252,9 +244,7 @@ async def simulate_reading(page: Page, seconds: float) -> None:
 
         # 30% chance of a tiny scroll
         if secrets.randbelow(100) < 30:
-            await human_scroll(
-                page, random.randint(50, 200), max_steps=random.randint(2, 5)
-            )
+            await human_scroll(page, random.randint(50, 200), max_steps=random.randint(2, 5))
 
         # 20% chance of moving the mouse
         if secrets.randbelow(100) < 20:
@@ -272,6 +262,7 @@ async def simulate_reading(page: Page, seconds: float) -> None:
 
 
 # ─── Convenience wrappers for common scraping patterns ────────────────────────
+
 
 async def slowly_scroll_feed(page: Page, max_scrolls: int = 6) -> None:
     """Scroll a result feed (like Google Maps sidebar) in a human-like way.

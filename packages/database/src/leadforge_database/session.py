@@ -5,14 +5,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from leadforge_config import get_settings
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-
-from leadforge_config import get_settings
 
 
 def make_engine(database_url: str | None = None) -> AsyncEngine:

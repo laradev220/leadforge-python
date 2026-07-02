@@ -32,8 +32,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from leadforge_scraper_core.base import fetch_html
 from leadforge_scraper_core.strategies.selector import SelectorStrategy
-from leadforge_scraper_core.monitors.selector_tracker import SelectorTracker
-
 
 SELECTORS_PATH = Path(__file__).parent / "selectors.yaml"
 
@@ -55,6 +53,7 @@ async def test_selectors(
         return {}
 
     from selectolax.parser import HTMLParser
+
     tree = HTMLParser(html)
 
     config = selector_strategy.config
@@ -100,7 +99,7 @@ async def analyze_and_update(
     selector_strategy = SelectorStrategy()
 
     # Load current config
-    with open(SELECTORS_PATH, "r") as f:
+    with open(SELECTORS_PATH) as f:
         config = yaml.safe_load(f)
 
     if source not in config.get("sources", {}):
@@ -110,7 +109,7 @@ async def analyze_and_update(
         return
 
     # Test existing selectors
-    print(f"Testing existing selectors from selectors.yaml...\n")
+    print("Testing existing selectors from selectors.yaml...\n")
     field_results = await test_selectors(source, sample_url, selector_strategy, None)
 
     # Report
@@ -149,7 +148,7 @@ async def analyze_and_update(
     print("\nAutomatic selector discovery not yet implemented.")
     print("Please manually update selectors.yaml based on the analysis above.")
 
-    print(f"\nUpdated config would look like:")
+    print("\nUpdated config would look like:")
     for field, results in field_results.items():
         working_sels = [sel for sel, ok in results.items() if ok]
         if working_sels:

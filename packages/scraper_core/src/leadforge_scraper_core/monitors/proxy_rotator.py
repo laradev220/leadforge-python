@@ -6,16 +6,11 @@ Each proxy can optionally include auth: http://user:pass@host:port.
 
 from __future__ import annotations
 
-import os
 import asyncio
-import random
-import time
-from typing import Iterator
+import os
 
 import redis.asyncio as redis
-
 from leadforge_config import get_settings
-from leadforge_scraper_core.exceptions import ProxyError
 
 
 class ProxyManager:
@@ -78,6 +73,7 @@ class ProxyManager:
             if count >= self._failure_threshold:
                 await self._mark_bad(proxy)
                 import structlog
+
                 log = structlog.get_logger("scraper.proxy_rotator")
                 log.warning(
                     "proxy.marked_bad",
@@ -140,6 +136,7 @@ class ProxyManager:
     def _hash_proxy(proxy: str) -> str:
         """Deterministic hash for Redis key."""
         import hashlib
+
         return hashlib.sha256(proxy.encode()).hexdigest()[:16]
 
 

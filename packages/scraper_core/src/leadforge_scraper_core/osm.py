@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import httpx
+
 from leadforge_scraper_core.google_maps import MapsBusiness
+
 
 async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
     try:
@@ -11,12 +13,14 @@ async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
             geo_res = await client.get(
                 f"https://nominatim.openstreetmap.org/search?q={keyword} {location}&format=json&limit=1"
             )
-            if geo_res.status_code != 200: return []
+            if geo_res.status_code != 200:
+                return []
             geo_data = geo_res.json()
-            if not geo_data: return []
-            
+            if not geo_data:
+                return []
+
             lat, lon = geo_data[0]["lat"], geo_data[0]["lon"]
-            
+
             query = f"""[out:json][timeout:25];
             (
                 node["name"~"{keyword}",i](around:10000, {lat}, {lon});
@@ -24,14 +28,14 @@ async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
                 relation["name"~"{keyword}",i](around:10000, {lat}, {lon});
             );
             out center;"""
-            
+
             res = await client.post(
-                "https://overpass.openstreetmap.fr/api/interpreter",
-                data={"data": query}
+                "https://overpass.openstreetmap.fr/api/interpreter", data={"data": query}
             )
-            if res.status_code != 200: return []
+            if res.status_code != 200:
+                return []
             elements = res.json().get("elements", [])
-            
+
             return [
                 MapsBusiness(
                     external_id=f"openstreetmap:{el['id']}",
@@ -42,7 +46,7 @@ async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
                     website=el["tags"].get("website"),
                     latitude=el.get("lat") or el.get("center", {}).get("lat"),
                     longitude=el.get("lon") or el.get("center", {}).get("lon"),
-                    source="OSM"
+                    source="OSM",
                 )
                 for el in elements
             ]

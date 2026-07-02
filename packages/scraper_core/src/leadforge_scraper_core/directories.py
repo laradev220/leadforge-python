@@ -7,34 +7,33 @@ and adds its own circuit breaker.  All use the enhanced base.py fetch_html.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import structlog
-from selectolax.parser import HTMLParser
-from tenacity import retry, stop_after_attempt, wait_exponential_jitter, after_log
-
 from leadforge_shared.utils import make_ext_id
+from selectolax.parser import HTMLParser
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+from leadforge_scraper_core import metrics as scraper_metrics
 from leadforge_scraper_core.base import fetch_html
 from leadforge_scraper_core.google_maps import MapsBusiness
 from leadforge_scraper_core.monitors.circuit_breaker import get_circuit_breaker
 from leadforge_scraper_core.strategies import (
-    ExtractionStrategy,
-    StrategyResult,
-    create_pipeline,
-    StructuredDataStrategy,
-    SelectorStrategy,
     RegexStrategy,
+    SelectorStrategy,
+    StrategyResult,
+    StructuredDataStrategy,
+    create_pipeline,
 )
-from leadforge_scraper_core import metrics as scraper_metrics
-
 
 logger = structlog.get_logger("scraper.directories")
 
-_pipeline = create_pipeline([
-    StructuredDataStrategy(),
-    SelectorStrategy(),
-    RegexStrategy(),
-])
+_pipeline = create_pipeline(
+    [
+        StructuredDataStrategy(),
+        SelectorStrategy(),
+        RegexStrategy(),
+    ]
+)
 
 
 async def _run_extraction_pipeline(
@@ -48,10 +47,7 @@ async def _run_extraction_pipeline(
         try:
             result = await strategy.extract(html, url, logger=logger)
             if result:
-                if best:
-                    best = best.merge_with(result)
-                else:
-                    best = result
+                best = best.merge_with(result) if best else result
         except Exception as exc:
             logger.debug(
                 "directory.strategy_failed",
@@ -139,8 +135,12 @@ async def _search_directory(
         await circuit.record_failure(exc)
         logger.exception(
             "directory.search_failed",
-            source=source_label, keyword=keyword, location=location, url=url,
-            duration_ms=duration_ms, error=str(exc),
+            source=source_label,
+            keyword=keyword,
+            location=location,
+            url=url,
+            duration_ms=duration_ms,
+            error=str(exc),
         )
         return []
     finally:
@@ -161,7 +161,9 @@ async def search_yellow_pages_pk(keyword: str, location: str) -> list[MapsBusine
     url = f"https://www.yellowpages.com.pk/search.php?what={keyword}&where={location}"
     try:
         return await _search_directory(
-            keyword, location, url,
+            keyword,
+            location,
+            url,
             source_label="yellowpages_pk",
             name_selectors=[".business-listing h2", ".result .title"],
         )
@@ -174,7 +176,9 @@ async def search_hotfrog_pk(keyword: str, location: str) -> list[MapsBusiness]:
     url = f"https://www.hotfrog.pk/search?q={keyword}&location={location}"
     try:
         return await _search_directory(
-            keyword, location, url,
+            keyword,
+            location,
+            url,
             source_label="hotfrog_pk",
             name_selectors=[".business-listing .title", ".listing h3"],
         )
@@ -187,7 +191,9 @@ async def search_cybo_pk(keyword: str, location: str) -> list[MapsBusiness]:
     url = f"https://www.cybo.com/Pakistan/?search={keyword}&location={location}"
     try:
         return await _search_directory(
-            keyword, location, url,
+            keyword,
+            location,
+            url,
             source_label="cybo_pk",
             name_selectors=[".business-listing .title", ".listing h2"],
         )
@@ -200,7 +206,9 @@ async def search_kompass_pk(keyword: str, location: str) -> list[MapsBusiness]:
     url = f"https://www.kompass.com/en/search/companies?text={keyword}&location={location}"
     try:
         return await _search_directory(
-            keyword, location, url,
+            keyword,
+            location,
+            url,
             source_label="kompass_pk",
             name_selectors=[".company-item h3", ".result .company-name"],
         )

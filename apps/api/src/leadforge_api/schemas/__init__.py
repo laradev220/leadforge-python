@@ -6,9 +6,6 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, AliasChoices
-
-
 from leadforge_shared.types import (
     ContactSource,
     ContactType,
@@ -20,7 +17,7 @@ from leadforge_shared.types import (
     UserRole,
     WebsiteStatus,
 )
-
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field
 
 # ---------- Auth ----------
 
@@ -29,7 +26,9 @@ class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
     email: EmailStr
     password: str = Field(min_length=8)
-    full_name: str | None = Field(default=None, validation_alias=AliasChoices("fullName", "full_name"))
+    full_name: str | None = Field(
+        default=None, validation_alias=AliasChoices("fullName", "full_name")
+    )
 
 
 class LoginRequest(BaseModel):
@@ -61,7 +60,9 @@ class TokenResponse(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    full_name: str | None = Field(default=None, validation_alias=AliasChoices("fullName", "full_name"))
+    full_name: str | None = Field(
+        default=None, validation_alias=AliasChoices("fullName", "full_name")
+    )
     email: EmailStr | None = None
 
 

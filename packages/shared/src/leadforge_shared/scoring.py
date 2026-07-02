@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from leadforge_shared.constants import CONTACT_PRIORITY
@@ -93,9 +93,7 @@ def _calc_website_opportunity(scoring_input: ScoringInput) -> int:
     if not website.ssl_enabled or not website.has_contact_form:
         return 25
 
-    if not website.mobile_friendly or (
-        website.seo_score is not None and website.seo_score < 50
-    ):
+    if not website.mobile_friendly or (website.seo_score is not None and website.seo_score < 50):
         return 15
 
     return 0
@@ -124,7 +122,7 @@ def _calc_social_activity(scoring_input: ScoringInput) -> int:
         return 0
 
     max_points = 0
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     for profile in scoring_input.social_profiles:
         if profile.last_activity_at is None:
@@ -135,7 +133,7 @@ def _calc_social_activity(scoring_input: ScoringInput) -> int:
         if isinstance(last_active, str):
             last_active = datetime.fromisoformat(last_active.replace("Z", "+00:00"))
         if last_active.tzinfo is None:
-            last_active = last_active.replace(tzinfo=timezone.utc)
+            last_active = last_active.replace(tzinfo=UTC)
 
         days_since = (now - last_active).total_seconds() / 86400
 

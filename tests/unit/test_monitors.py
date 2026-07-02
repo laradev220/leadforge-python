@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-import pytest
 
+import pytest
 from leadforge_scraper_core.monitors.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitState,
 )
+from leadforge_scraper_core.monitors.proxy_rotator import ProxyManager
 from leadforge_scraper_core.monitors.rate_limiter import (
+    AdaptiveRateLimiter,
     DomainRateLimiter,
     GlobalConcurrencyLimiter,
-    AdaptiveRateLimiter,
 )
-from leadforge_scraper_core.monitors.proxy_rotator import ProxyManager
 
 
 class TestCircuitBreaker:
@@ -83,6 +83,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_cleanup_window(self, cb: CircuitBreaker) -> None:
         import time
+
         cb._failures = [time.time() - 120, time.time() - 90, time.time() - 30]
         cb._cleanup_window()
         assert len(cb._failures) == 1
@@ -160,11 +161,13 @@ class TestProxyManager:
 
     @pytest.fixture
     def manager(self) -> ProxyManager:
-        return ProxyManager(proxies=[
-            "http://proxy1.example.com:8080",
-            "http://proxy2.example.com:8080",
-            "http://proxy3.example.com:8080",
-        ])
+        return ProxyManager(
+            proxies=[
+                "http://proxy1.example.com:8080",
+                "http://proxy2.example.com:8080",
+                "http://proxy3.example.com:8080",
+            ]
+        )
 
     def test_initialization(self, manager: ProxyManager) -> None:
         assert len(manager) == 3

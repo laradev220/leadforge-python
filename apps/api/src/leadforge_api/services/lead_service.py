@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from leadforge_database.models import Business, LeadScore
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, contains_eager
+from sqlalchemy.orm import contains_eager, selectinload
 
 from leadforge_api.core.errors import not_found
-from leadforge_database.models import Business, LeadScore
 
 
 async def list_leads(
@@ -29,7 +29,11 @@ async def list_leads(
     # Build base query with explicit INNER JOIN to LeadScore
     # This ensures lead_score filters are properly correlated with the business
     query = select(Business).join(LeadScore, Business.id == LeadScore.business_id)
-    count_query = select(func.count()).select_from(Business).join(LeadScore, Business.id == LeadScore.business_id)
+    count_query = (
+        select(func.count())
+        .select_from(Business)
+        .join(LeadScore, Business.id == LeadScore.business_id)
+    )
 
     where = []
     if score_min is not None:
@@ -49,8 +53,7 @@ async def list_leads(
 
     total = await session.scalar(count_query.where(*where))
     result = await session.execute(
-        query
-        .where(*where)
+        query.where(*where)
         .order_by(Business.created_at.desc())
         .offset((page - 1) * limit)
         .limit(limit)

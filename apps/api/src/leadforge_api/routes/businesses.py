@@ -26,7 +26,6 @@ async def list_businesses(
     user_id: CurrentUserId,
     session: DBSession,
     page: int = Query(1, ge=1),
-
     limit: int = Query(50, ge=1, le=100),
     name: str | None = None,
     city: str | None = None,
@@ -70,7 +69,9 @@ async def re_enrich(business_id: str, user_id: CurrentUserId, session: DBSession
 
 
 @router.get("/{business_id}/website", response_model=None)
-async def get_business_website(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
+async def get_business_website(
+    business_id: str, user_id: CurrentUserId, session: DBSession
+) -> dict:
     await business_service.get_by_id(session, UUID(business_id))
     website = await business_service.get_website(session, UUID(business_id))
     if website is None:
@@ -79,7 +80,9 @@ async def get_business_website(business_id: str, user_id: CurrentUserId, session
 
 
 @router.get("/{business_id}/contacts", response_model=None)
-async def list_business_contacts(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
+async def list_business_contacts(
+    business_id: str, user_id: CurrentUserId, session: DBSession
+) -> dict:
     contacts = await business_service.list_contacts(session, UUID(business_id))
     return success([ContactResponse.model_validate(c).model_dump(mode="json") for c in contacts])
 
@@ -93,7 +96,9 @@ async def add_business_contact(
 
 
 @router.get("/{business_id}/social-profiles", response_model=None)
-async def list_business_social_profiles(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
+async def list_business_social_profiles(
+    business_id: str, user_id: CurrentUserId, session: DBSession
+) -> dict:
     profiles = await business_service.list_social_profiles(session, UUID(business_id))
     return success(
         [SocialProfileResponse.model_validate(p).model_dump(mode="json") for p in profiles]

@@ -7,14 +7,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
+from leadforge_shared.utils import is_valid_email, normalize_phone
 from selectolax.parser import HTMLParser
 
 from leadforge_scraper_core.base import fetch_html
-from leadforge_shared.utils import normalize_phone, is_valid_email
-
 
 logger = structlog.get_logger("scraper.contact")
 
@@ -29,9 +27,7 @@ class ExtractedContact:
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 PHONE_RE = re.compile(r"[\+]?[\d\s\-\(\)]{7,20}")
-WHATSAPP_RE = re.compile(
-    r"(?:wa\.me|whatsapp\.com)/(?:send\?phone=)?(\d+)", re.I
-)
+WHATSAPP_RE = re.compile(r"(?:wa\.me|whatsapp\.com)/(?:send\?phone=)?(\d+)", re.I)
 
 HIGH_CONF_EMAILS = ["info", "hello", "contact", "support", "admin", "sales"]
 
@@ -51,9 +47,7 @@ async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
         local = email.split("@")[0].lower()
         is_high = local in HIGH_CONF_EMAILS
         domain = email.split("@")[1]
-        is_biz = domain not in [
-            "gmail.com", "yahoo.com", "hotmail.com", "outlook.com"
-        ]
+        is_biz = domain not in ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
         score = 90 if is_high and is_biz else (60 if is_biz else 30)
         contacts.append(ExtractedContact("EMAIL", email, score))
 

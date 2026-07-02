@@ -10,14 +10,15 @@ Stays open for: 30 minutes, then transitions to HALF_OPEN for a probe request.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 import redis.asyncio as redis
-
 from leadforge_config import get_settings
+
 from leadforge_scraper_core.exceptions import CircuitOpenError
 
 
@@ -129,7 +130,10 @@ class CircuitBreaker:
                 return True
             if self._state == CircuitState.OPEN:
                 # Check if open duration has elapsed
-                if self._opened_at and (time.time() - self._opened_at) >= self.config.open_duration_seconds:
+                if (
+                    self._opened_at
+                    and (time.time() - self._opened_at) >= self.config.open_duration_seconds
+                ):
                     await self._half_open_circuit()
                     return True
                 return False
@@ -159,6 +163,7 @@ class CircuitBreaker:
         self._state = CircuitState.OPEN
         self._opened_at = time.time()
         import structlog
+
         log = structlog.get_logger("scraper.circuit_breaker")
         log.warning(
             "circuit.open",
@@ -167,15 +172,14 @@ class CircuitBreaker:
             opened_at=self._opened_at,
         )
         # Persist state asynchronously so we don't block
-        try:
+        with contextlib.suppress(Exception):
             await self._persist_state()
-        except Exception:
-            pass
 
     async def _half_open_circuit(self) -> None:
         self._state = CircuitState.HALF_OPEN
         self._half_open_requests = self.config.half_open_max_requests
         import structlog
+
         log = structlog.get_logger("scraper.circuit_breaker")
         log.info("circuit.half_open", source=self.source)
 
@@ -185,6 +189,7 @@ class CircuitBreaker:
         self._failures.clear()
         self._half_open_requests = 0
         import structlog
+
         log = structlog.get_logger("scraper.circuit_breaker")
         log.info("circuit.closed", source=self.source)
 

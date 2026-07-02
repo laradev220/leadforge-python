@@ -5,10 +5,9 @@ Tests the fixes applied to the contact extraction pipeline.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from leadforge_scraper_core.contact import (
     ExtractedContact,
     crawl_website,
@@ -16,8 +15,8 @@ from leadforge_scraper_core.contact import (
     get_priority_urls,
 )
 
-
 # ── crawl_website improvements ────────────────────────────────────────────────
+
 
 class TestCrawlWebsite:
     """Tests for the improved crawl_website() with empty URL guard."""
@@ -25,7 +24,9 @@ class TestCrawlWebsite:
     @pytest.mark.asyncio
     async def test_empty_url_returns_early(self) -> None:
         """Should return empty string without calling fetch_html for empty URLs."""
-        with patch("leadforge_scraper_core.contact.fetch_html", new_callable=AsyncMock) as mock_fetch:
+        with patch(
+            "leadforge_scraper_core.contact.fetch_html", new_callable=AsyncMock
+        ) as mock_fetch:
             result = await crawl_website("")
             assert result == ""
             mock_fetch.assert_not_called()
@@ -33,7 +34,9 @@ class TestCrawlWebsite:
     @pytest.mark.asyncio
     async def test_none_url_returns_early(self) -> None:
         """Should handle None-like falsy values."""
-        with patch("leadforge_scraper_core.contact.fetch_html", new_callable=AsyncMock) as mock_fetch:
+        with patch(
+            "leadforge_scraper_core.contact.fetch_html", new_callable=AsyncMock
+        ) as mock_fetch:
             result = await crawl_website("")
             assert result == ""
             mock_fetch.assert_not_called()
@@ -61,12 +64,13 @@ class TestCrawlWebsite:
             "leadforge_scraper_core.contact.fetch_html",
             new_callable=AsyncMock,
             return_value=None,
-        ) as mock_fetch:
+        ):
             result = await crawl_website("https://example.com")
             assert result == ""
 
 
 # ── get_priority_urls ─────────────────────────────────────────────────────────
+
 
 class TestGetPriorityUrls:
     """Tests for get_priority_urls()."""
@@ -209,7 +213,7 @@ class TestExtractContacts:
 
     @pytest.mark.asyncio
     async def test_lower_confidence_for_free_email(self) -> None:
-        html = '<html><body><p>Email: business@gmail.com</p></body></html>'
+        html = "<html><body><p>Email: business@gmail.com</p></body></html>"
         contacts = await extract_contacts(html, "https://example.com")
         emails = [c for c in contacts if c.type == "EMAIL"]
         if emails:
@@ -217,7 +221,7 @@ class TestExtractContacts:
 
     @pytest.mark.asyncio
     async def test_confidence_for_business_email(self) -> None:
-        html = '<html><body><p>Email: hello@acmecorp.com</p></body></html>'
+        html = "<html><body><p>Email: hello@acmecorp.com</p></body></html>"
         contacts = await extract_contacts(html, "https://example.com")
         emails = [c for c in contacts if c.type == "EMAIL"]
         if emails:
@@ -230,6 +234,7 @@ class TestExtractContacts:
 
 
 # ── ExtractedContact dataclass ────────────────────────────────────────────────
+
 
 class TestExtractedContact:
     """Tests for the ExtractedContact dataclass."""

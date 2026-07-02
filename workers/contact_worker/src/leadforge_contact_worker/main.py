@@ -7,15 +7,13 @@ Google Maps) even when no website URL is available, rather than skipping entirel
 import asyncio
 import secrets
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
-from leadforge_database.models import Contact, ContactType, ContactSource, Business
-from leadforge_shared.types import ContactJobData
-from leadforge_worker_core.core import WorkerWrapper, enqueue_job, get_arq_pool
+from leadforge_database.models import Business, Contact, ContactSource, ContactType
 from leadforge_scraper_core import crawl_website, extract_contacts, get_priority_urls
+from leadforge_shared.types import ContactJobData
+from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from sqlalchemy import select
 
 
 async def _extract_from_business_record(business_id, session, logger):
@@ -45,14 +43,16 @@ async def _extract_from_business_record(business_id, session, logger):
     if existing.scalar_one_or_none():
         return
 
-    session.add(Contact(
-        business_id=business_id,
-        type=ContactType.PHONE,
-        value=phone,
-        source=ContactSource.MAPS,
-        confidence_score=80,
-        is_verified=False,
-    ))
+    session.add(
+        Contact(
+            business_id=business_id,
+            type=ContactType.PHONE,
+            value=phone,
+            source=ContactSource.MAPS,
+            confidence_score=80,
+            is_verified=False,
+        )
+    )
     logger.info(
         "contact_extracted_from_business_record",
         businessId=str(business_id),
@@ -100,22 +100,26 @@ async def contact_processor(data: ContactJobData, logger):
         for c in contacts:
             res = await session.execute(
                 select(Contact).where(
-                    Contact.business_id == business_id, 
-                    Contact.type == c.type, 
-                    Contact.value == c.value
+                    Contact.business_id == business_id,
+                    Contact.type == c.type,
+                    Contact.value == c.value,
                 )
             )
             if not res.scalar_one_or_none():
-                session.add(Contact(
-                    business_id=business_id,
-                    type=c.type,
-                    value=c.value,
-                    source="WEBSITE",
-                    confidence_score=c.confidence_score
-                ))
+                session.add(
+                    Contact(
+                        business_id=business_id,
+                        type=c.type,
+                        value=c.value,
+                        source="WEBSITE",
+                        confidence_score=c.confidence_score,
+                    )
+                )
         await session.commit()
 
-    await enqueue_job("social", "social", {"business_id": str(business_id), "website_url": website_url})
+    await enqueue_job(
+        "social", "social", {"business_id": str(business_id), "website_url": website_url}
+    )
 
 
 worker = WorkerWrapper("contact", contact_processor)
@@ -133,6 +137,7 @@ async def contact(ctx: dict, business_id: str, website_url: str = "") -> None:
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
     import time
+
     from arq import Worker
     from arq.connections import RedisSettings
 
@@ -142,9 +147,7 @@ def main():
             worker_instance = Worker(
                 functions=[contact],
                 queue_name="contact",
-                redis_settings=RedisSettings(
-                    host=settings.redis_host, port=settings.redis_port
-                ),
+                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port),
                 max_jobs=settings.scraper_concurrency,
             )
             worker_instance.run()

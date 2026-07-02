@@ -41,11 +41,12 @@ async def me(user: CurrentUser) -> dict:
 
 
 @router.put("/me", response_model=None)
-async def update_me(
-    body: UpdateProfileRequest, user_id: CurrentUserId, session: DBSession
-) -> dict:
+async def update_me(body: UpdateProfileRequest, user_id: CurrentUserId, session: DBSession) -> dict:
     updated = await auth_service.update_profile(
-        session, user_id, full_name=body.full_name, email=body.email,
+        session,
+        user_id,
+        full_name=body.full_name,
+        email=body.email,
     )
     return success(UserResponse.model_validate(updated).model_dump(mode="json"))
 
@@ -55,6 +56,9 @@ async def change_password(
     body: ChangePasswordRequest, user_id: CurrentUserId, session: DBSession
 ) -> dict:
     await auth_service.change_password(
-        session, user_id, body.current_password, body.new_password,
+        session,
+        user_id,
+        body.current_password,
+        body.new_password,
     )
     return success({"changed": True})

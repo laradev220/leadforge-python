@@ -25,8 +25,6 @@ from leadforge_api.routes import (
 )
 from leadforge_api.routes.scrapers import router as scrapers_router
 
-from leadforge_api.routes.scrapers import router as scrapers_router
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,6 +74,7 @@ async def health() -> dict:
 async def scraper_health() -> dict:
     """Dedicated scraper health endpoint (no auth)."""
     from leadforge_scraper_core.metrics import get_scraper_health
+
     health = await get_scraper_health()
     return {"success": True, "service": "leadforge-scrapers", "sources": health}
 
@@ -84,6 +83,7 @@ async def scraper_health() -> dict:
 async def metrics() -> Response:
     """Prometheus metrics endpoint (no auth)."""
     from leadforge_scraper_core.metrics import get_metrics_bytes, get_metrics_content_type
+
     return Response(content=get_metrics_bytes(), media_type=get_metrics_content_type())
 
 
@@ -146,7 +146,6 @@ async def unhandled_handler(_request: Request, exc: Exception) -> JSONResponse:
 
 def run() -> None:
     import uvicorn
-
     from leadforge_config import get_settings
 
     settings = get_settings()

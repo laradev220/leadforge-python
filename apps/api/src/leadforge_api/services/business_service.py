@@ -4,12 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from leadforge_api.core.errors import not_found
-from leadforge_api.core.queue import enqueue_website
 from leadforge_database.models import (
     Business,
     Contact,
@@ -17,6 +11,12 @@ from leadforge_database.models import (
     SocialProfile,
     Website,
 )
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from leadforge_api.core.errors import not_found
+from leadforge_api.core.queue import enqueue_website
 
 
 async def list_businesses(
@@ -96,7 +96,9 @@ async def get_website(session: AsyncSession, business_id: UUID) -> Website | Non
 
 async def list_contacts(session: AsyncSession, business_id: UUID) -> list[Contact]:
     result = await session.execute(
-        select(Contact).where(Contact.business_id == business_id).order_by(Contact.created_at.desc())
+        select(Contact)
+        .where(Contact.business_id == business_id)
+        .order_by(Contact.created_at.desc())
     )
     return list(result.scalars())
 

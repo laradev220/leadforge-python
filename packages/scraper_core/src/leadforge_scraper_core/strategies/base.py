@@ -12,12 +12,9 @@ The pipeline composes strategies and short-circuits on first non-None result.
 
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
-
-from selectolax.parser import HTMLParser
 
 
 @dataclass
@@ -55,17 +52,27 @@ class StrategyResult:
         if not other:
             return self
         self_fields = [
-            "name", "category", "address", "city", "state", "country",
-            "postal_code", "phone", "website", "rating", "review_count",
-            "latitude", "longitude", "email",
+            "name",
+            "category",
+            "address",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+            "phone",
+            "website",
+            "rating",
+            "review_count",
+            "latitude",
+            "longitude",
+            "email",
         ]
         for f in self_fields:
             if getattr(self, f) is None:
                 setattr(self, f, getattr(other, f))
         if not self.social_handles and other.social_handles:
             self.social_handles = other.social_handles
-        if self.confidence < other.confidence:
-            self.confidence = other.confidence
+        self.confidence = max(self.confidence, other.confidence)
         self.extras.update(other.extras)
         return self
 

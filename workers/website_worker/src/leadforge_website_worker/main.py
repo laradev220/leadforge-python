@@ -18,20 +18,43 @@ from leadforge_worker_core.core import WorkerWrapper, enqueue_job
 from sqlalchemy import select
 
 # Known business listing/directory sites that are NOT the business's own website
-_LISTING_SITES = frozenset({
-    "bizify.co.uk", "yell.com", "yell.co.uk", "thomsonlocal.com",
-    "freeindex.co.uk", "192.com", "yellowpages.com", "tripadvisor.com",
-    "trustpilot.com", "google.com", "facebook.com", "instagram.com",
-    "linkedin.com", "twitter.com", "x.com", "tiktok.com", "youtube.com",
-    "apple.com", "bing.com", "opendi.co.uk", "cylex-uk.co.uk",
-    "hotfrog.co.uk", "uksmallbusinessdirectory.co.uk", "tupalo.co.uk",
-    "golocal247.com", "brownbook.net", "storeboard.com",
-})
+_LISTING_SITES = frozenset(
+    {
+        "bizify.co.uk",
+        "yell.com",
+        "yell.co.uk",
+        "thomsonlocal.com",
+        "freeindex.co.uk",
+        "192.com",
+        "yellowpages.com",
+        "tripadvisor.com",
+        "trustpilot.com",
+        "google.com",
+        "facebook.com",
+        "instagram.com",
+        "linkedin.com",
+        "twitter.com",
+        "x.com",
+        "tiktok.com",
+        "youtube.com",
+        "apple.com",
+        "bing.com",
+        "opendi.co.uk",
+        "cylex-uk.co.uk",
+        "hotfrog.co.uk",
+        "uksmallbusinessdirectory.co.uk",
+        "tupalo.co.uk",
+        "golocal247.com",
+        "brownbook.net",
+        "storeboard.com",
+    }
+)
 
 
 def _is_listing_site(url: str) -> bool:
     """Check if a URL belongs to a business listing/directory site."""
     from urllib.parse import urlparse
+
     try:
         host = urlparse(url).hostname or ""
         domain = host.removeprefix("www.").lower()

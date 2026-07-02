@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
-from typing import Any, Callable, Coroutine, Generic, TypeVar
-from uuid import UUID
+from collections.abc import Callable, Coroutine
+from typing import Any, TypeVar
 
 import structlog
 from arq.connections import ArqRedis, RedisSettings, create_pool
-from sqlalchemy import insert
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from leadforge_config import get_settings
 from leadforge_database.models import JobQueueLog
+from sqlalchemy import insert
 
 T = TypeVar("T")
 Processor = Callable[[T, structlog.BoundLogger], Coroutine[Any, Any, None]]
 
 
-class WorkerWrapper(Generic[T]):
+class WorkerWrapper[T]:
     def __init__(self, name: str, processor: Processor):
         self.name = name
         self.processor = processor
@@ -53,8 +50,11 @@ class WorkerWrapper(Generic[T]):
         _wrapper.__qualname__ = self.name
         return _wrapper
 
-    async def _log_to_db(self, job_id: str, status: str, duration: int, error: str | None = None) -> None:
+    async def _log_to_db(
+        self, job_id: str, status: str, duration: int, error: str | None = None
+    ) -> None:
         from leadforge_database import get_session_ctx
+
         async with get_session_ctx() as session:
             try:
                 await session.execute(

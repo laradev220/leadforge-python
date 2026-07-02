@@ -46,7 +46,9 @@ async def create_search_job(
         country=body.country,
     )
     return success(
-        CreateSearchJobResponse(job_id=job.id, status=SearchJobStatus(job.status)).model_dump(mode="json")
+        CreateSearchJobResponse(job_id=job.id, status=SearchJobStatus(job.status)).model_dump(
+            mode="json"
+        )
     )
 
 
@@ -72,9 +74,7 @@ async def list_search_jobs(
 
 
 @router.get("/{job_id}", response_model=None)
-async def get_search_job(
-    job_id: str, user_id: CurrentUserId, session: DBSession
-) -> dict:
+async def get_search_job(job_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     from uuid import UUID
 
     job = await search_job_service.get_by_id(session, user_id, UUID(job_id))
@@ -82,9 +82,7 @@ async def get_search_job(
 
 
 @router.post("/{job_id}/cancel", response_model=None)
-async def cancel_search_job(
-    job_id: str, user_id: CurrentUserId, session: DBSession
-) -> dict:
+async def cancel_search_job(job_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     from uuid import UUID
 
     await search_job_service.cancel(session, user_id, UUID(job_id))

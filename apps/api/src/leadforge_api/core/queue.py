@@ -6,7 +6,6 @@ from typing import Any
 from uuid import UUID
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
-
 from leadforge_config import get_settings
 
 _pool: ArqRedis | None = None

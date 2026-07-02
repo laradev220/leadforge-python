@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from leadforge_database.models import SearchJob, SearchJobStatus
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from leadforge_api.core.errors import not_found
 from leadforge_api.core.queue import enqueue_discovery
-from leadforge_database.models import SearchJob, SearchJobStatus
 
 
 async def create(
@@ -59,7 +59,9 @@ async def get_by_id(session: AsyncSession, user_id: UUID, job_id: UUID) -> Searc
         select(SearchJob)
         .options(
             selectinload(SearchJob.businesses).selectinload(
-                __import__("leadforge_database.models", fromlist=["SearchJobBusiness"]).SearchJobBusiness.business
+                __import__(
+                    "leadforge_database.models", fromlist=["SearchJobBusiness"]
+                ).SearchJobBusiness.business
             )
         )
         .where(SearchJob.id == job_id, SearchJob.user_id == user_id)

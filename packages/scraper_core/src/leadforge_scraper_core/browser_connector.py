@@ -18,11 +18,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import secrets
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+from dataclasses import dataclass
+from typing import Any
 
 import httpx
 import structlog
@@ -84,15 +84,15 @@ class CDPBrowser:
         logger.info("cdp.connecting", cdp_url=self.config.cdp_url)
         tabs = await self.list_tabs()
         if not tabs:
-            raise RuntimeError("No Chrome tabs found. Is Chrome running with --remote-debugging-port=9222?")
+            raise RuntimeError(
+                "No Chrome tabs found. Is Chrome running with --remote-debugging-port=9222?"
+            )
         logger.info("cdp.connected", tabs_count=len(tabs))
 
     async def disconnect(self) -> None:
-        for tab_id, ws in list(self._tab_websockets.items()):
-            try:
+        for _tab_id, ws in list(self._tab_websockets.items()):
+            with suppress(Exception):
                 await ws.aclose()
-            except Exception:
-                pass
         self._tab_websockets.clear()
         self._tab_message_ids.clear()
         self._tab_responses.clear()
@@ -148,17 +148,13 @@ class CDPBrowser:
         """Close a Chrome tab and clean up its WebSocket."""
         ws = self._tab_websockets.pop(tab_id, None)
         if ws:
-            try:
+            with suppress(Exception):
                 await ws.aclose()
-            except Exception:
-                pass
         self._tab_message_ids.pop(tab_id, None)
         self._tab_responses.pop(tab_id, None)
         if self._client:
-            try:
+            with suppress(Exception):
                 await self._client.get(f"{self.config.cdp_url}/json/close/{tab_id}")
-            except Exception:
-                pass
 
     # ── WebSocket per Tab ─────────────────────────────────────────────────────
 
@@ -169,6 +165,7 @@ class CDPBrowser:
 
         ws_url = f"{self.config.cdp_url.replace('http', 'ws')}/devtools/page/{tab_id}"
         import websockets
+
         ws = await websockets.connect(ws_url)
         self._tab_websockets[tab_id] = ws
         self._tab_message_ids[tab_id] = 0
@@ -206,7 +203,9 @@ class CDPBrowser:
                     future = self._tab_responses.get(tab_id, {}).get(msg["id"])
                     if future and not future.done():
                         if "error" in msg:
-                            future.set_exception(Exception(msg["error"].get("message", "CDP Error")))
+                            future.set_exception(
+                                Exception(msg["error"].get("message", "CDP Error"))
+                            )
                         else:
                             future.set_result(msg.get("result"))
                 elif "method" in msg:
@@ -214,7 +213,9 @@ class CDPBrowser:
                         try:
                             await handler(msg.get("params", {}))
                         except Exception as e:
-                            logger.warning("cdp.event_handler_error", method=msg["method"], error=str(e))
+                            logger.warning(
+                                "cdp.event_handler_error", method=msg["method"], error=str(e)
+                            )
         except Exception:
             pass
 
@@ -229,10 +230,8 @@ class CDPBrowser:
             """,
         ]
         for evasion in evasions:
-            try:
+            with suppress(Exception):
                 await self._send_to_tab(tab_id, "Runtime.evaluate", {"expression": evasion})
-            except Exception:
-                pass
 
     # ── High-Level Tab Operations ─────────────────────────────────────────────
 
@@ -242,13 +241,13 @@ class CDPBrowser:
         await self._send_to_tab(tab_id, "Page.navigate", {"url": url})
 
         # Wait for load
-        try:
+        with suppress(TimeoutError, Exception):
             await asyncio.wait_for(
-                self._wait_for_event("Page.loadEventFired", timeout=self.config.navigation_timeout_ms / 1000),
+                self._wait_for_event(
+                    "Page.loadEventFired", timeout=self.config.navigation_timeout_ms / 1000
+                ),
                 timeout=self.config.navigation_timeout_ms / 1000,
             )
-        except (asyncio.TimeoutError, Exception):
-            pass
 
         if self.config.stealth:
             await self._apply_stealth_to_tab(tab_id)
@@ -266,7 +265,8 @@ class CDPBrowser:
     async def evaluate_in_tab(self, tab_id: str, expression: str) -> Any:
         """Run JavaScript in a tab and return the result."""
         result = await self._send_to_tab(
-            tab_id, "Runtime.evaluate",
+            tab_id,
+            "Runtime.evaluate",
             {"expression": expression, "returnByValue": True},
         )
         return result.get("result", {}).get("value")
@@ -335,6 +335,7 @@ class TabContext:
 
 
 # ── High-Level API (backward compatible) ──────────────────────────────────────
+
 
 async def fetch_with_authenticated_session(
     url: str,

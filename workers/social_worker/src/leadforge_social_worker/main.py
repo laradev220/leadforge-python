@@ -8,22 +8,21 @@ Rate-limits profile scrapes sequentially with configurable delays.
 """
 
 import asyncio
+import contextlib
 import re
 import secrets
 from urllib.parse import quote_plus, urlparse
 
 import httpx
 import structlog
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
-from leadforge_database.models import SocialProfile, Business
-from leadforge_shared.types import SocialJobData
-from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from leadforge_database.models import Business, SocialProfile
 from leadforge_scraper_core import extract_social_profiles, scrape_social_profile_rich
 from leadforge_scraper_core.social_platforms import get_social_platform_search_terms
+from leadforge_shared.types import SocialJobData
+from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from sqlalchemy import select
 
 logger = structlog.get_logger("worker.social")
 
@@ -41,6 +40,7 @@ _SOCIAL_DOMAINS = {
 
 
 # ── Google search: httpx fallback ─────────────────────────────────────────────
+
 
 async def _search_social_by_name_httpx(business_name: str) -> list[dict]:
     """Search Google for social profiles using plain HTTP."""
@@ -90,6 +90,7 @@ async def _search_social_by_name_httpx(business_name: str) -> list[dict]:
 
 # ── Google search: CDP-based ──────────────────────────────────────────────────
 
+
 async def _search_social_by_name_cdp(
     business_name: str,
     cdp_url: str,
@@ -134,10 +135,8 @@ async def _search_social_by_name_cdp(
         logger.debug("cdp_google_search.failed", error=str(exc))
     finally:
         if browser:
-            try:
+            with contextlib.suppress(Exception):
                 await browser.disconnect()
-            except Exception:
-                pass
 
     return profiles
 
@@ -160,6 +159,7 @@ async def _search_social_by_name(
 
 # ── Main processor ────────────────────────────────────────────────────────────
 
+
 async def social_processor(data: SocialJobData, log):
     business_id = data.business_id
     website_url = data.website_url
@@ -169,7 +169,9 @@ async def social_processor(data: SocialJobData, log):
     use_cdp = settings.use_authenticated_session
     scrape_delay_ms = settings.social_scrape_delay_ms
 
-    log.info("discovering_social", businessId=str(business_id), url=website_url, cdp_enabled=use_cdp)
+    log.info(
+        "discovering_social", businessId=str(business_id), url=website_url, cdp_enabled=use_cdp
+    )
 
     profiles = []
 
@@ -177,14 +179,17 @@ async def social_processor(data: SocialJobData, log):
     if website_url:
         try:
             from leadforge_scraper_core import crawl_website
+
             html = await crawl_website(website_url)
             extracted = await extract_social_profiles(html or "", website_url)
             for ep in extracted:
-                profiles.append({
-                    "platform": ep.platform.value,
-                    "profile_url": ep.profile_url,
-                    "username": ep.username,
-                })
+                profiles.append(
+                    {
+                        "platform": ep.platform.value,
+                        "profile_url": ep.profile_url,
+                        "username": ep.username,
+                    }
+                )
         except Exception as e:
             log.error("crawl_failed", businessId=str(business_id), error=str(e))
 
@@ -197,10 +202,16 @@ async def social_processor(data: SocialJobData, log):
 
             if business:
                 name_profiles = await _search_social_by_name(
-                    business.name, use_cdp=use_cdp, cdp_url=cdp_url,
+                    business.name,
+                    use_cdp=use_cdp,
+                    cdp_url=cdp_url,
                 )
                 profiles.extend(name_profiles)
-                log.info("social_profiles_found_by_name", businessId=str(business_id), count=len(name_profiles))
+                log.info(
+                    "social_profiles_found_by_name",
+                    businessId=str(business_id),
+                    count=len(name_profiles),
+                )
             else:
                 log.warning("business_not_found", businessId=str(business_id))
         except Exception as e:
@@ -270,6 +281,7 @@ async def social_processor(data: SocialJobData, log):
     if use_cdp:
         try:
             from leadforge_scraper_core.browser_connector import CDPBrowser
+
             browser = await CDPBrowser.create(cdp_url=cdp_url)
         except Exception as exc:
             log.warning("cdp_browser_unavailable", error=str(exc))
@@ -287,7 +299,9 @@ async def social_processor(data: SocialJobData, log):
             )
 
             try:
-                contacts = await _scrape_profile(sp, browser=browser, cdp_url=cdp_url, use_cdp=use_cdp)
+                contacts = await _scrape_profile(
+                    sp, browser=browser, cdp_url=cdp_url, use_cdp=use_cdp
+                )
                 if contacts:
                     await _update_profile(sp, contacts, session=None)
             except Exception as exc:
@@ -295,7 +309,11 @@ async def social_processor(data: SocialJobData, log):
 
             # Rate limit between scrapes (not after the last one)
             if idx < len(saved_profiles):
-                delay = scrape_delay_ms + secrets.randbelow(max(1, scrape_delay_ms // 3)) - scrape_delay_ms // 6
+                delay = (
+                    scrape_delay_ms
+                    + secrets.randbelow(max(1, scrape_delay_ms // 3))
+                    - scrape_delay_ms // 6
+                )
                 actual_ms = max(1000, delay)
                 log.debug("scrape_delay", ms=actual_ms)
                 await asyncio.sleep(actual_ms / 1000.0)
@@ -309,7 +327,7 @@ async def social_processor(data: SocialJobData, log):
             try:
                 res = await session.execute(select(SocialProfile).where(SocialProfile.id == sp.id))
                 db_sp = res.scalar_one_or_none()
-                if db_sp and hasattr(sp, '_contacts'):
+                if db_sp and hasattr(sp, "_contacts"):
                     contacts = sp._contacts
                     updated = False
                     for field_name in ("public_email", "public_phone", "website"):
@@ -317,13 +335,21 @@ async def social_processor(data: SocialJobData, log):
                         if val and not getattr(db_sp, field_name):
                             setattr(db_sp, field_name, val)
                             updated = True
-                    for field_name in ("followers", "following", "posts_count", "bio", "profile_image_url"):
+                    for field_name in (
+                        "followers",
+                        "following",
+                        "posts_count",
+                        "bio",
+                        "profile_image_url",
+                    ):
                         val = contacts.get(field_name)
                         if val and not getattr(db_sp, field_name):
                             setattr(db_sp, field_name, val)
                             updated = True
                     if updated:
-                        log.info("profile_updated", platform=db_sp.platform, fields=list(contacts.keys()))
+                        log.info(
+                            "profile_updated", platform=db_sp.platform, fields=list(contacts.keys())
+                        )
             except Exception as e:
                 log.error("profile_update_failed", error=str(e))
         await session.commit()
@@ -339,7 +365,6 @@ async def _scrape_profile(
 ) -> dict:
     """Scrape a single profile for contacts + rich data."""
     if use_cdp and browser:
-        from leadforge_scraper_core.browser_connector import CDPBrowser
         async with browser.tab_context(sp.profile_url) as tab:
             await asyncio.sleep(1.5 + secrets.randbelow(3))
             html = await tab.get_html()
@@ -353,7 +378,9 @@ async def _scrape_profile(
 
     log = logger.bind(platform=sp.platform, url=sp.profile_url)
     try:
-        html = await fetch_html(sp.profile_url, use_playwright=True, source="social_scraper", logger=log)
+        html = await fetch_html(
+            sp.profile_url, use_playwright=True, source="social_scraper", logger=log
+        )
         if html and len(html) > 200:
             return await scrape_social_profile_rich(html, sp.profile_url, sp.platform.value)
     except Exception as exc:
@@ -380,6 +407,7 @@ async def social(ctx: dict, business_id: str, website_url: str = "") -> None:
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
     import time
+
     from arq import Worker
     from arq.connections import RedisSettings
 
@@ -389,9 +417,7 @@ def main():
             worker_instance = Worker(
                 functions=[social],
                 queue_name="social",
-                redis_settings=RedisSettings(
-                    host=settings.redis_host, port=settings.redis_port
-                ),
+                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port),
                 max_jobs=settings.scraper_concurrency,
             )
             worker_instance.run()

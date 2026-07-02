@@ -10,7 +10,6 @@ import re
 
 from leadforge_shared.types import SocialPlatform
 
-
 # Social platform domains mapping
 SOCIAL_DOMAINS = {
     "facebook.com": SocialPlatform.FACEBOOK,
@@ -25,33 +24,78 @@ SOCIAL_DOMAINS = {
 
 # Business-like email domains (higher confidence)
 BUSINESS_EMAIL_DOMAINS = {
-    "company.com", "business.com", "corp.com", "llc.com",
-    "inc.com", "org", "net", "edu", "gov", "mil", "co.uk",
-    "com.au", "ca", "de", "fr", "es", "it", "nl", "be",
+    "company.com",
+    "business.com",
+    "corp.com",
+    "llc.com",
+    "inc.com",
+    "org",
+    "net",
+    "edu",
+    "gov",
+    "mil",
+    "co.uk",
+    "com.au",
+    "ca",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "nl",
+    "be",
 }
 
 # Free email domains (lower confidence)
 FREE_EMAIL_DOMAINS = {
-    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
-    "icloud.com", "mail.com", "aol.com", "protonmail.com",
-    "me.com", "mac.com", "live.com", "msn.com",
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "icloud.com",
+    "mail.com",
+    "aol.com",
+    "protonmail.com",
+    "me.com",
+    "mac.com",
+    "live.com",
+    "msn.com",
 }
 
 # Generic/system email prefixes to discard (non-person, unmonitored)
 DISCARD_EMAIL_PREFIXES = {
-    "noreply", "no-reply", "donotreply", "example", "test",
-    "webmaster", "postmaster", "hostmaster", "abuse",
+    "noreply",
+    "no-reply",
+    "donotreply",
+    "example",
+    "test",
+    "webmaster",
+    "postmaster",
+    "hostmaster",
+    "abuse",
 }
 
 # Social platform names for Google search
 SOCIAL_PLATFORM_NAMES = [
-    "linkedin", "facebook", "instagram", "twitter", "tiktok",
-    "threads", "youtube", "x",
+    "linkedin",
+    "facebook",
+    "instagram",
+    "twitter",
+    "tiktok",
+    "threads",
+    "youtube",
+    "x",
 ]
 
 # Business indicators for free email domains
 BUSINESS_EMAIL_INDICATORS = [
-    "info", "hello", "contact", "support", "admin", "sales", "help", "enquiries",
+    "info",
+    "hello",
+    "contact",
+    "support",
+    "admin",
+    "sales",
+    "help",
+    "enquiries",
 ]
 
 # Social platform display names
@@ -67,10 +111,10 @@ SOCIAL_PLATFORM_DISPLAY_NAMES = {
 
 def get_social_platform_from_domain(domain: str) -> SocialPlatform | None:
     """Get social platform from domain name.
-    
+
     Args:
         domain: Domain name (with or without www prefix)
-        
+
     Returns:
         SocialPlatform if found, None otherwise
     """
@@ -81,17 +125,17 @@ def get_social_platform_from_domain(domain: str) -> SocialPlatform | None:
 
 def is_business_email(email: str) -> bool:
     """Check if an email address looks like a business email.
-    
+
     Args:
         email: Email address to check
-        
+
     Returns:
         True if the email looks like a business email, False otherwise
     """
     if "@" not in email:
         return False
 
-    local_part = email.split("@")[0]
+    local_part = email.split("@", maxsplit=1)[0]
     domain = email.split("@")[1].lower()
     local_part = local_part.lower()
 
@@ -101,25 +145,23 @@ def is_business_email(email: str) -> bool:
     # Discard generic/system emails
     if any(local_part.startswith(prefix) for prefix in DISCARD_EMAIL_PREFIXES):
         return False
-        
+
     # Business-like domains (higher confidence)
     if domain in BUSINESS_EMAIL_DOMAINS:
         return True
-        
+
     # Free email domains (lower confidence)
     if domain in FREE_EMAIL_DOMAINS:
         # Check if local part looks business-like
-        if any(indicator in local_part for indicator in BUSINESS_EMAIL_INDICATORS):
-            return True
-        return False
-        
+        return bool(any(indicator in local_part for indicator in BUSINESS_EMAIL_INDICATORS))
+
     # Other domains (org, net, etc.) - assume business
     return True
 
 
 def get_social_platform_search_terms() -> list[str]:
     """Get social platform search terms for Google searches.
-    
+
     Returns:
         List of social platform search terms
     """
@@ -128,10 +170,10 @@ def get_social_platform_search_terms() -> list[str]:
 
 def get_social_platform_display_name(platform: SocialPlatform) -> str:
     """Get display name for a social platform.
-    
+
     Args:
         platform: SocialPlatform enum value
-        
+
     Returns:
         Display name for the platform
     """
@@ -140,10 +182,10 @@ def get_social_platform_display_name(platform: SocialPlatform) -> str:
 
 def is_valid_phone_number(phone: str) -> bool:
     """Basic validation for phone numbers.
-    
+
     Args:
         phone: Phone number to validate
-        
+
     Returns:
         True if the phone number looks valid, False otherwise
     """
@@ -151,16 +193,12 @@ def is_valid_phone_number(phone: str) -> bool:
         return False
 
     # Skip obviously invalid formats before cleaning
-    if re.search(r'order\s*#', phone, re.I):
+    if re.search(r"order\s*#", phone, re.I):
         return False
 
     # Remove common formatting characters
-    cleaned = re.sub(r'[^\d\+\-\(\)\s]', '', phone)
+    cleaned = re.sub(r"[^\d\+\-\(\)\s]", "", phone)
 
     # Basic length validation
-    digits_only = re.sub(r'[^\d]', '', cleaned)
-    if len(digits_only) < 7 or len(digits_only) > 15:
-        return False
-
-    return True
-
+    digits_only = re.sub(r"[^\d]", "", cleaned)
+    return not (len(digits_only) < 7 or len(digits_only) > 15)

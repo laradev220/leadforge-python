@@ -15,9 +15,8 @@ from dataclasses import dataclass
 
 import httpx
 import structlog
-from playwright.async_api import async_playwright
-
 from leadforge_shared.utils import extract_domain, normalize_url
+from playwright.async_api import async_playwright
 
 logger = structlog.get_logger("scraper.website")
 
@@ -46,27 +45,42 @@ async def _httpx_probe(url: str) -> WebsiteAnalysis:
     start = time.time()
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            resp = await client.get(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": "gzip, deflate, br",
-            })
+            resp = await client.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.5",
+                    "Accept-Encoding": "gzip, deflate, br",
+                },
+            )
             load_time = int((time.time() - start) * 1000)
             # 403 means the site IS reachable but blocking automated requests.
             # Explicit 403 check makes the intent clear even though 403 < 500.
             reachable = resp.status_code < 500 or resp.status_code == 403
             return WebsiteAnalysis(
-                url=url, domain=domain, ssl_enabled=ssl, is_reachable=reachable,
-                http_status=resp.status_code, load_time_ms=load_time,
-                mobile_friendly=None, has_contact_form=False, seo_score=0,
+                url=url,
+                domain=domain,
+                ssl_enabled=ssl,
+                is_reachable=reachable,
+                http_status=resp.status_code,
+                load_time_ms=load_time,
+                mobile_friendly=None,
+                has_contact_form=False,
+                seo_score=0,
             )
     except Exception:
         load_time = int((time.time() - start) * 1000)
         return WebsiteAnalysis(
-            url=url, domain=domain, ssl_enabled=False, is_reachable=False,
-            http_status=None, load_time_ms=load_time, mobile_friendly=None,
-            has_contact_form=False, seo_score=0,
+            url=url,
+            domain=domain,
+            ssl_enabled=False,
+            is_reachable=False,
+            http_status=None,
+            load_time_ms=load_time,
+            mobile_friendly=None,
+            has_contact_form=False,
+            seo_score=0,
         )
 
 
@@ -128,9 +142,15 @@ async def _playwright_analyze(url: str) -> WebsiteAnalysis | None:
 
             await browser.close()
             return WebsiteAnalysis(
-                url=url, domain=domain, ssl_enabled=ssl, is_reachable=reachable,
-                http_status=status, load_time_ms=load_time, mobile_friendly=mobile,
-                has_contact_form=has_form, seo_score=min(seo, 100),
+                url=url,
+                domain=domain,
+                ssl_enabled=ssl,
+                is_reachable=reachable,
+                http_status=status,
+                load_time_ms=load_time,
+                mobile_friendly=mobile,
+                has_contact_form=has_form,
+                seo_score=min(seo, 100),
             )
     except Exception as exc:
         logger.debug("playwright_analysis_failed", url=url, error=str(exc))
@@ -169,7 +189,7 @@ async def analyze_website(raw_url: str) -> WebsiteAnalysis:
         )
         if rich is not None:
             return rich
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.debug("playwright_analysis_timed_out", url=url)
     except Exception as exc:
         logger.debug("playwright_analysis_error", url=url, error=str(exc))

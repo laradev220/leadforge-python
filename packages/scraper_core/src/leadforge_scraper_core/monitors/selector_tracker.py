@@ -12,13 +12,11 @@ Usage:
 
 from __future__ import annotations
 
-import os
 import time
-from typing import Any
 
 import redis.asyncio as redis
-
 from leadforge_config import get_settings
+
 from leadforge_scraper_core.cache import get_cache
 
 
@@ -114,6 +112,7 @@ class SelectorTracker:
             if streak >= self._FAILURE_THRESHOLD:
                 await self._mark_deprecated(client, source, field, selector, url=url)
                 import structlog
+
                 log = structlog.get_logger("scraper.selector_tracker")
                 log.warning(
                     "selector.deprecated",
@@ -145,6 +144,7 @@ class SelectorTracker:
         if url:
             await self._cache.invalidate(url)
             import structlog
+
             log = structlog.get_logger("scraper.selector_tracker")
             log.info("selector.cache_invalidated", url=url, source=source, field=field)
 

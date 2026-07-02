@@ -34,8 +34,8 @@ class StructuredDataStrategy(ExtractionStrategy):
         return bool(
             '<script type="application/ld+json"' in html
             or '<meta property="og:' in html
-            or 'itemscope' in html
-            or 'itemtype' in html
+            or "itemscope" in html
+            or "itemtype" in html
         )
 
     async def extract(
@@ -113,9 +113,7 @@ class StructuredDataStrategy(ExtractionStrategy):
                 result.longitude = item["geo"].get("longitude")
             if "aggregateRating" in item:
                 result.rating = self._safe_float(item["aggregateRating"].get("ratingValue"))
-                result.review_count = self._safe_int(
-                    item["aggregateRating"].get("reviewCount")
-                )
+                result.review_count = self._safe_int(item["aggregateRating"].get("reviewCount"))
             result.extras["jsonld_type"] = typ
 
     def _extract_address(self, addr: Any) -> str | None:
@@ -177,7 +175,7 @@ class StructuredDataStrategy(ExtractionStrategy):
         return data
 
     def _apply_microdata(self, microdata: dict[str, Any], result: StrategyResult) -> None:
-        for typename, props in microdata.items():
+        for _typename, props in microdata.items():
             if "name" in props and not result.name:
                 result.name = props["name"]
             if "telephone" in props and not result.phone:

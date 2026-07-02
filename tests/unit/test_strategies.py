@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import pytest
-
-from leadforge_scraper_core.strategies.base import StrategyResult, create_pipeline, ExtractionStrategy
-from leadforge_scraper_core.strategies.structured import StructuredDataStrategy
-from leadforge_scraper_core.strategies.selector import SelectorStrategy
+from leadforge_scraper_core.strategies.base import (
+    StrategyResult,
+    create_pipeline,
+)
 from leadforge_scraper_core.strategies.regex import RegexStrategy
+from leadforge_scraper_core.strategies.structured import StructuredDataStrategy
 
 
 @pytest.fixture
 def google_maps_html() -> str:
     from pathlib import Path
+
     fixture = Path(__file__).parent.parent / "fixtures" / "google_maps_listing.html"
     return fixture.read_text()
 
@@ -20,6 +22,7 @@ def google_maps_html() -> str:
 @pytest.fixture
 def yelp_html() -> str:
     from pathlib import Path
+
     fixture = Path(__file__).parent / "fixtures" / "yelp_search.html"
     return fixture.read_text()
 
@@ -27,6 +30,7 @@ def yelp_html() -> str:
 @pytest.fixture
 def plain_html() -> str:
     from pathlib import Path
+
     fixture = Path(__file__).parent / "fixtures" / "business_page_no_structured_data.html"
     return fixture.read_text()
 

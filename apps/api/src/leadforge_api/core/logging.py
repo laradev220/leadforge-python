@@ -6,7 +6,6 @@ import logging
 import sys
 
 import structlog
-
 from leadforge_config import get_settings
 
 
@@ -47,7 +46,7 @@ def configure_logging(component: str) -> None:
         force=True,
     )
 
-    bind = structlog.get_logger(component).bind(service=component)
+    structlog.get_logger(component).bind(service=component)
 
 
 def get_logger(component: str) -> structlog.stdlib.BoundLogger:

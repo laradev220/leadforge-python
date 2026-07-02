@@ -6,15 +6,14 @@ import time
 from typing import Any
 
 from fastapi import APIRouter, Response
-
-from leadforge_api.core.deps import AdminUser
+from leadforge_scraper_core.cache import get_cache
 from leadforge_scraper_core.metrics import (
     get_metrics_bytes,
     get_metrics_content_type,
     get_scraper_health,
 )
-from leadforge_scraper_core.cache import get_cache
 
+from leadforge_api.core.deps import AdminUser
 
 router = APIRouter(prefix="/scrapers", tags=["scrapers"])
 
@@ -68,10 +67,11 @@ async def cache_invalidate(
 @router.post("/cache/clear")
 async def cache_clear(_admin: AdminUser) -> dict[str, Any]:
     """Clear the entire HTML cache (admin only)."""
-    cache = get_cache()
+    get_cache()
     try:
         import redis.asyncio as redis
         from leadforge_config import get_settings
+
         settings = get_settings()
         client = redis.Redis(host=settings.redis_host, port=settings.redis_port)
         keys = []
@@ -98,7 +98,7 @@ async def get_selector_stats(
     # _admin: AdminUser is a FastAPI dependency injected via Depends(require_admin)
     from leadforge_scraper_core.monitors.selector_tracker import SelectorTracker
 
-    tracker = SelectorTracker()
+    SelectorTracker()
     # We return a placeholder — actual implementation would need Redis inspection
     return {
         "success": True,

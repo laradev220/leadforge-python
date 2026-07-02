@@ -14,30 +14,31 @@ import time
 from urllib.parse import quote_plus
 
 import structlog
-from selectolax.parser import HTMLParser
-from tenacity import retry, stop_after_attempt, wait_exponential_jitter, after_log
-
 from leadforge_shared.utils import make_ext_id
+from selectolax.parser import HTMLParser
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
+from leadforge_scraper_core import metrics as scraper_metrics
 from leadforge_scraper_core.base import fetch_html
 from leadforge_scraper_core.google_maps import MapsBusiness
 from leadforge_scraper_core.monitors.circuit_breaker import get_circuit_breaker
 from leadforge_scraper_core.strategies import (
-    StrategyResult,
-    create_pipeline,
-    StructuredDataStrategy,
-    SelectorStrategy,
     RegexStrategy,
+    SelectorStrategy,
+    StrategyResult,
+    StructuredDataStrategy,
+    create_pipeline,
 )
-from leadforge_scraper_core import metrics as scraper_metrics
-
 
 logger = structlog.get_logger("scraper.directories_global")
 
-_pipeline = create_pipeline([
-    StructuredDataStrategy(),
-    SelectorStrategy(),
-    RegexStrategy(),
-])
+_pipeline = create_pipeline(
+    [
+        StructuredDataStrategy(),
+        SelectorStrategy(),
+        RegexStrategy(),
+    ]
+)
 
 
 async def _run_extraction_pipeline(
@@ -51,10 +52,7 @@ async def _run_extraction_pipeline(
         try:
             result = await strategy.extract(html, url, logger=logger)
             if result:
-                if best:
-                    best = best.merge_with(result)
-                else:
-                    best = result
+                best = best.merge_with(result) if best else result
         except Exception as exc:
             logger.debug(
                 "global_dir.strategy_failed",
@@ -117,11 +115,11 @@ async def _search_with_retry(
         # CSS fallback
         tree = HTMLParser(html)
         results: list[MapsBusiness] = []
-        for node in tree.css("[data-testid='serp-result'], .businessResult__373c0__1Bk0N, .container__373c0__1NUiT, [class*='businessResult'], .listing__373c0__1TIje"):
+        for node in tree.css(
+            "[data-testid='serp-result'], .businessResult__373c0__1Bk0N, .container__373c0__1NUiT, [class*='businessResult'], .listing__373c0__1TIje"
+        ):
             try:
-                name_el = node.css_first(
-                    "[data-testid='businessName'], h4, h3, a[href*='/biz/']"
-                )
+                name_el = node.css_first("[data-testid='businessName'], h4, h3, a[href*='/biz/']")
                 if not name_el:
                     continue
                 name = name_el.text(strip=True)
@@ -136,11 +134,13 @@ async def _search_with_retry(
                     if m:
                         ext_id = f"{source_label}:{m.group(1)}"
 
-                results.append(MapsBusiness(
-                    external_id=ext_id,
-                    name=name,
-                    source=source_label.upper(),
-                ))
+                results.append(
+                    MapsBusiness(
+                        external_id=ext_id,
+                        name=name,
+                        source=source_label.upper(),
+                    )
+                )
             except Exception:
                 continue
 
@@ -158,8 +158,11 @@ async def _search_with_retry(
         await circuit.record_failure(exc)
         logger.exception(
             "global_dir.search_failed",
-            source=source_label, keyword=keyword, location=location,
-            duration_ms=duration_ms, error=str(exc),
+            source=source_label,
+            keyword=keyword,
+            location=location,
+            duration_ms=duration_ms,
+            error=str(exc),
         )
         return []
 

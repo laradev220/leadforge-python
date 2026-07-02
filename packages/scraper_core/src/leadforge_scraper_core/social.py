@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 import structlog
+from leadforge_shared.types import SocialPlatform
+from leadforge_shared.utils import is_valid_email, normalize_phone
 from selectolax.parser import HTMLParser
 
-from leadforge_shared.types import SocialPlatform
-from leadforge_shared.utils import normalize_phone, is_valid_email
 from leadforge_scraper_core.social_platforms import (
     SOCIAL_DOMAINS,
     is_business_email,
@@ -40,12 +40,26 @@ PHONE_RE = re.compile(
     re.VERBOSE,
 )
 
-_SKIP_WEBSITE_DOMAINS: frozenset[str] = frozenset({
-    "facebook.com", "fb.com", "instagram.com", "linkedin.com",
-    "twitter.com", "x.com", "tiktok.com", "youtube.com",
-    "google.com", "accounts.google.com", "wa.me", "api.whatsapp.com",
-    "snapchat.com", "pinterest.com", "reddit.com", "medium.com",
-})
+_SKIP_WEBSITE_DOMAINS: frozenset[str] = frozenset(
+    {
+        "facebook.com",
+        "fb.com",
+        "instagram.com",
+        "linkedin.com",
+        "twitter.com",
+        "x.com",
+        "tiktok.com",
+        "youtube.com",
+        "google.com",
+        "accounts.google.com",
+        "wa.me",
+        "api.whatsapp.com",
+        "snapchat.com",
+        "pinterest.com",
+        "reddit.com",
+        "medium.com",
+    }
+)
 
 
 @dataclass
@@ -59,6 +73,7 @@ class ExtractedSocial:
 @dataclass
 class RichProfileData:
     """Rich social profile data extracted from profile pages."""
+
     followers: int | None = None
     following: int | None = None
     posts_count: int | None = None
@@ -73,6 +88,7 @@ class RichProfileData:
 
 # ── Social link extraction from HTML ──────────────────────────────────────────
 
+
 async def extract_social_profiles(html: str, base_url: str) -> list[ExtractedSocial]:
     """Extract social profile links from HTML page content."""
     profiles = []
@@ -84,7 +100,8 @@ async def extract_social_profiles(html: str, base_url: str) -> list[ExtractedSoc
         if not href:
             continue
         try:
-            from urllib.parse import urlparse, urljoin
+            from urllib.parse import urljoin, urlparse
+
             full_url = urljoin(base_url, href)
             parsed = urlparse(full_url)
             domain = parsed.netloc.removeprefix("www.")
@@ -103,6 +120,7 @@ async def extract_social_profiles(html: str, base_url: str) -> list[ExtractedSoc
             continue
         try:
             from urllib.parse import urlparse
+
             parsed = urlparse(content)
             domain = parsed.netloc.removeprefix("www.")
             platform = SOCIAL_DOMAINS.get(domain)
@@ -117,6 +135,7 @@ async def extract_social_profiles(html: str, base_url: str) -> list[ExtractedSoc
 
 
 # ── Contact extraction ────────────────────────────────────────────────────────
+
 
 def _extract_emails(html: str) -> dict[str, str]:
     """Extract best email from HTML. Returns {'public_email': email} or {}."""
@@ -138,11 +157,11 @@ def _extract_phones(text: str) -> dict[str, str]:
         if len(cleaned) < 7:
             continue
         # Filter out date-like patterns (YYYYMMDD, YYYY-MM-DD, DD/MM/YYYY, etc.)
-        digits_only = re.sub(r'[^\d]', '', cleaned)
-        if re.match(r'^\d{4}[-/]?\d{2}[-/]?\d{2}$', cleaned.replace(' ', '')):
+        digits_only = re.sub(r"[^\d]", "", cleaned)
+        if re.match(r"^\d{4}[-/]?\d{2}[-/]?\d{2}$", cleaned.replace(" ", "")):
             continue
         # Filter out patterns like +20200505 (digits starting with 20 + 6 more = dates)
-        if re.match(r'^\+?20\d{6}$', digits_only):
+        if re.match(r"^\+?20\d{6}$", digits_only):
             continue
         # Filter out short codes that look like order/reference numbers
         if len(digits_only) <= 6:
@@ -159,7 +178,7 @@ def _extract_phones(text: str) -> dict[str, str]:
 
 def _extract_website(html: str, profile_url: str, platform: str) -> dict[str, str]:
     """Extract business website link from profile page. Returns {'website': url} or {}."""
-    from urllib.parse import urlparse, urljoin
+    from urllib.parse import urljoin, urlparse
 
     tree = HTMLParser(html)
     for a in tree.css("a[href]"):
@@ -188,6 +207,7 @@ def _extract_website(html: str, profile_url: str, platform: str) -> dict[str, st
 
 
 # ── Rich profile data extraction (platform-specific) ──────────────────────────
+
 
 def _parse_count(text: str) -> int | None:
     """Parse a human-readable count like '1.2K', '500K', '3M' into an integer."""
@@ -365,6 +385,7 @@ def extract_rich_profile_data(html: str, platform: str) -> RichProfileData:
 
 # ── Combined scrape (contacts + rich data) ─────────────────────────────────────
 
+
 async def scrape_social_profile_for_contacts(
     profile_url: str,
     platform: str,
@@ -382,21 +403,29 @@ async def scrape_social_profile_for_contacts(
         html: str | None = None
         if use_authenticated_session:
             try:
-                from leadforge_scraper_core.browser_connector import fetch_with_authenticated_session
+                from leadforge_scraper_core.browser_connector import (
+                    fetch_with_authenticated_session,
+                )
+
                 html = await fetch_with_authenticated_session(profile_url, cdp_url=cdp_url)
             except Exception:
                 pass
 
         if not html:
             from leadforge_scraper_core.base import fetch_html
-            html = await fetch_html(profile_url, use_playwright=True, source="social_scraper", logger=log)
+
+            html = await fetch_html(
+                profile_url, use_playwright=True, source="social_scraper", logger=log
+            )
 
         if not html or len(html) < 200:
             log.debug("social_scrape.empty_or_blocked")
             return result
 
         result.update(_extract_emails(html))
-        result.update(_extract_phones(HTMLParser(html).body.text() if HTMLParser(html).body else ""))
+        result.update(
+            _extract_phones(HTMLParser(html).body.text() if HTMLParser(html).body else "")
+        )
         result.update(_extract_website(html, profile_url, platform))
 
         if result:

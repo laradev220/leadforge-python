@@ -10,8 +10,8 @@ The budget is tracked via a Redis counter so it is shared across workers.
 
 from __future__ import annotations
 
-import os
 import asyncio
+import os
 from typing import Any
 
 import httpx
@@ -28,9 +28,22 @@ _BUDGET_WINDOW = 3600  # 1-hour window
 
 # Business signal keywords that indicate the page is worth AI analysis
 _BUSINESS_SIGNALS = [
-    "business", "company", "office", "store", "shop", "restaurant",
-    "service", "location", "contact us", "about us", "address", "phone",
-    "director", "manager", "founder", "ceo",
+    "business",
+    "company",
+    "office",
+    "store",
+    "shop",
+    "restaurant",
+    "service",
+    "location",
+    "contact us",
+    "about us",
+    "address",
+    "phone",
+    "director",
+    "manager",
+    "founder",
+    "ceo",
 ]
 
 
@@ -51,9 +64,9 @@ class AIFallbackStrategy(ExtractionStrategy):
 
     _USER_PROMPT_TEMPLATE = (
         "Extract business information from this HTML page (first 8000 chars):\n\n{content}\n\n"
-        "Return JSON only. Example: {{\"name\": \"Acme Corp\", \"phone\": \"+1 555-1234\", "
-        "\"email\": null, \"address\": \"123 Main St\", \"website\": \"https://acme.com\", "
-        "\"category\": \"Restaurant\"}}"
+        'Return JSON only. Example: {{"name": "Acme Corp", "phone": "+1 555-1234", '
+        '"email": null, "address": "123 Main St", "website": "https://acme.com", '
+        '"category": "Restaurant"}}'
     )
 
     def can_handle(self, html: str) -> bool:
@@ -89,6 +102,7 @@ class AIFallbackStrategy(ExtractionStrategy):
                 return None
 
             import json
+
             data = json.loads(response)
 
             result = StrategyResult(strategy_name=self.name)
@@ -114,6 +128,7 @@ class AIFallbackStrategy(ExtractionStrategy):
         """Check Redis budget counter, return False if exhausted."""
         try:
             import redis.asyncio as redis
+
             client = redis.Redis(
                 host=os.environ.get("REDIS_HOST", "localhost"),
                 port=int(os.environ.get("REDIS_PORT", "6379")),

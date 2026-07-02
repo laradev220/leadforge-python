@@ -5,15 +5,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from leadforge_database.models import Business, SocialProfile
 from sqlalchemy import func, select
-from sqlalchemy.orm import joinedload
 
 from leadforge_api.core.deps import DBSession
 from leadforge_api.core.errors import not_found
 from leadforge_api.core.pagination import get_pagination
 from leadforge_api.core.response import paginated, success
 from leadforge_api.schemas import SocialProfileResponse, SocialProfileWithBusinessResponse
-from leadforge_database.models import Business, SocialProfile
 
 router = APIRouter(prefix="/social-profiles", tags=["social-profiles"])
 
@@ -46,7 +45,11 @@ async def list_social_profiles(
     sort_col = getattr(SocialProfile, sort_by)
     order = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
 
-    count_q = select(func.count()).select_from(SocialProfile).join(Business, SocialProfile.business_id == Business.id)
+    count_q = (
+        select(func.count())
+        .select_from(SocialProfile)
+        .join(Business, SocialProfile.business_id == Business.id)
+    )
     if where:
         count_q = count_q.where(*where)
     total = await session.scalar(count_q)

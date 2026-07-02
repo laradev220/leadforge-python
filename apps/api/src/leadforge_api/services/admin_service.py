@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import redis.asyncio as redis
-
 from leadforge_config import get_settings
 
 _QUEUE_NAMES = ("discovery", "website", "contact", "social", "scoring", "export")

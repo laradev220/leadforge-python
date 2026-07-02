@@ -14,10 +14,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
 from leadforge_scraper_core.monitors.circuit_breaker import CircuitState
-
 
 # ── Counters ─────────────────────────────────────────────────────────────────
 
@@ -81,6 +80,7 @@ retry_count = Histogram(
 
 # ── Rate computation helpers ──────────────────────────────────────────────────
 
+
 def scrape_success_rate(source: str) -> float:
     """Compute success rate as a ratio from counter values."""
     # Note: in multi-process Prometheus, use reduce_labels for accuracy
@@ -133,6 +133,7 @@ def get_metrics_content_type() -> str:
 
 
 # ── Health endpoint data ─────────────────────────────────────────────────────
+
 
 async def get_scraper_health() -> dict[str, Any]:
     """Gather health status for all known scraper sources."""

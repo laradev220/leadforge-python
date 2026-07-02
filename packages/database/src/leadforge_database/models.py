@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
@@ -20,7 +19,11 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -31,7 +34,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class SearchJobStatus(str, enum.Enum):
+class SearchJobStatus(enum.StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -39,14 +42,14 @@ class SearchJobStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class WebsiteStatus(str, enum.Enum):
+class WebsiteStatus(enum.StrEnum):
     UNKNOWN = "UNKNOWN"
     FOUND = "FOUND"
     NOT_FOUND = "NOT_FOUND"
     INVALID = "INVALID"
 
 
-class ContactType(str, enum.Enum):
+class ContactType(enum.StrEnum):
     EMAIL = "EMAIL"
     PHONE = "PHONE"
     WHATSAPP = "WHATSAPP"
@@ -59,7 +62,7 @@ class ContactType(str, enum.Enum):
     TWITTER = "TWITTER"
 
 
-class ContactSource(str, enum.Enum):
+class ContactSource(enum.StrEnum):
     MAPS = "MAPS"
     WEBSITE = "WEBSITE"
     SOCIAL = "SOCIAL"
@@ -67,7 +70,7 @@ class ContactSource(str, enum.Enum):
     MANUAL = "MANUAL"
 
 
-class SocialPlatform(str, enum.Enum):
+class SocialPlatform(enum.StrEnum):
     FACEBOOK = "FACEBOOK"
     INSTAGRAM = "INSTAGRAM"
     LINKEDIN = "LINKEDIN"
@@ -76,20 +79,20 @@ class SocialPlatform(str, enum.Enum):
     TWITTER = "TWITTER"
 
 
-class EnrichmentStatus(str, enum.Enum):
+class EnrichmentStatus(enum.StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
 
-class ExportFormat(str, enum.Enum):
+class ExportFormat(enum.StrEnum):
     CSV = "CSV"
     XLSX = "XLSX"
     JSON = "JSON"
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     ADMIN = "ADMIN"
     USER = "USER"
 
@@ -138,7 +141,11 @@ class SearchJob(Base):
     location: Mapped[str] = mapped_column(String(255), nullable=False)
     radius_km: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[SearchJobStatus] = mapped_column(
-        SAEnum(SearchJobStatus, name="search_job_status", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            SearchJobStatus,
+            name="search_job_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=SearchJobStatus.PENDING,
         nullable=False,
     )
@@ -177,7 +184,9 @@ class Business(Base):
     review_count: Mapped[int | None] = mapped_column(Integer)
     source: Mapped[str | None] = mapped_column(String(50), default="GOOGLE_MAPS")
     website_status: Mapped[WebsiteStatus] = mapped_column(
-        SAEnum(WebsiteStatus, name="website_status", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            WebsiteStatus, name="website_status", values_callable=lambda e: [m.value for m in e]
+        ),
         default=WebsiteStatus.UNKNOWN,
         nullable=False,
     )
@@ -210,7 +219,9 @@ class SearchJobBusiness(Base):
     search_job_id: Mapped[uuid.UUID] = mapped_column(
         _UUID, ForeignKey("search_jobs.id"), nullable=False
     )
-    business_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("businesses.id"), nullable=False)
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("businesses.id"), nullable=False
+    )
     created_at: Mapped[datetime] = _now()
 
     search_job: Mapped[SearchJob] = relationship(back_populates="businesses")
@@ -255,14 +266,18 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    business_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("businesses.id"), nullable=False)
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("businesses.id"), nullable=False
+    )
     type: Mapped[ContactType] = mapped_column(
         SAEnum(ContactType, name="contact_type", values_callable=lambda e: [m.value for m in e]),
         nullable=False,
     )
     value: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[ContactSource] = mapped_column(
-        SAEnum(ContactSource, name="contact_source", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            ContactSource, name="contact_source", values_callable=lambda e: [m.value for m in e]
+        ),
         default=ContactSource.WEBSITE,
         nullable=False,
     )
@@ -283,9 +298,13 @@ class SocialProfile(Base):
     __tablename__ = "social_profiles"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    business_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("businesses.id"), nullable=False)
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("businesses.id"), nullable=False
+    )
     platform: Mapped[SocialPlatform] = mapped_column(
-        SAEnum(SocialPlatform, name="social_platform", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            SocialPlatform, name="social_platform", values_callable=lambda e: [m.value for m in e]
+        ),
         nullable=False,
     )
     profile_url: Mapped[str] = mapped_column(Text, nullable=False)
@@ -345,10 +364,16 @@ class EnrichmentRun(Base):
     __tablename__ = "enrichment_runs"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    business_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("businesses.id"), nullable=False)
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("businesses.id"), nullable=False
+    )
     worker_name: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[EnrichmentStatus] = mapped_column(
-        SAEnum(EnrichmentStatus, name="enrichment_status", values_callable=lambda e: [m.value for m in e]),
+        SAEnum(
+            EnrichmentStatus,
+            name="enrichment_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=EnrichmentStatus.PENDING,
         nullable=False,
     )

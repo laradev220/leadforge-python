@@ -8,11 +8,9 @@ Invalidates when selector fails repeatedly (force fresh scrape).
 from __future__ import annotations
 
 import hashlib
-import os
 from typing import Any
 
 import redis.asyncio as redis
-
 from leadforge_config import get_settings
 
 

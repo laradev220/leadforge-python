@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Annotated, Any, Literal
+from enum import StrEnum
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class SearchJobStatus(str, Enum):
+class SearchJobStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -18,14 +18,14 @@ class SearchJobStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
-class WebsiteStatus(str, Enum):
+class WebsiteStatus(StrEnum):
     UNKNOWN = "UNKNOWN"
     FOUND = "FOUND"
     NOT_FOUND = "NOT_FOUND"
     INVALID = "INVALID"
 
 
-class ContactType(str, Enum):
+class ContactType(StrEnum):
     EMAIL = "EMAIL"
     PHONE = "PHONE"
     WHATSAPP = "WHATSAPP"
@@ -38,7 +38,7 @@ class ContactType(str, Enum):
     TWITTER = "TWITTER"
 
 
-class ContactSource(str, Enum):
+class ContactSource(StrEnum):
     MAPS = "MAPS"
     WEBSITE = "WEBSITE"
     SOCIAL = "SOCIAL"
@@ -46,7 +46,7 @@ class ContactSource(str, Enum):
     MANUAL = "MANUAL"
 
 
-class SocialPlatform(str, Enum):
+class SocialPlatform(StrEnum):
     FACEBOOK = "FACEBOOK"
     INSTAGRAM = "INSTAGRAM"
     LINKEDIN = "LINKEDIN"
@@ -55,20 +55,20 @@ class SocialPlatform(str, Enum):
     TWITTER = "TWITTER"
 
 
-class EnrichmentStatus(str, Enum):
+class EnrichmentStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     CSV = "CSV"
     XLSX = "XLSX"
     JSON = "JSON"
 
 
-class LeadGrade(str, Enum):
+class LeadGrade(StrEnum):
     A_PLUS = "A+"
     A = "A"
     B = "B"
@@ -77,7 +77,7 @@ class LeadGrade(str, Enum):
     F = "F"
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     ADMIN = "ADMIN"
     USER = "USER"
 

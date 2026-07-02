@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Final
 from urllib.parse import urlparse
 
 _PHONE_DIGITS_RE = re.compile(r"\D")

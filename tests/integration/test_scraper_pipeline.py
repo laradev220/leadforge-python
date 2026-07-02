@@ -7,27 +7,29 @@ to scored lead output, using fixture HTML files.
 from __future__ import annotations
 
 import asyncio
-import pytest
+from datetime import UTC
 
-from leadforge_scraper_core.strategies import create_pipeline, ExtractionStrategy
-from leadforge_scraper_core.strategies.structured import StructuredDataStrategy
-from leadforge_scraper_core.strategies.selector import SelectorStrategy
-from leadforge_scraper_core.strategies.regex import RegexStrategy
-from leadforge_scraper_core.strategies.base import StrategyResult
+import pytest
 from leadforge_scraper_core.monitors.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitState,
 )
 from leadforge_scraper_core.monitors.rate_limiter import DomainRateLimiter
-from leadforge_shared.scoring import calculate_lead_score, ScoringInput
-
+from leadforge_scraper_core.strategies import create_pipeline
+from leadforge_scraper_core.strategies.base import StrategyResult
+from leadforge_scraper_core.strategies.regex import RegexStrategy
+from leadforge_scraper_core.strategies.selector import SelectorStrategy
+from leadforge_scraper_core.strategies.structured import StructuredDataStrategy
+from leadforge_shared.scoring import ScoringInput, calculate_lead_score
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def fixture_dir():
     from pathlib import Path
+
     return Path(__file__).parent.parent / "fixtures"
 
 
@@ -44,14 +46,17 @@ def business_html(fixture_dir):
 @pytest.fixture
 def pipeline():
     """Full extraction pipeline sorted by priority."""
-    return create_pipeline([
-        StructuredDataStrategy(),
-        SelectorStrategy(),
-        RegexStrategy(),
-    ])
+    return create_pipeline(
+        [
+            StructuredDataStrategy(),
+            SelectorStrategy(),
+            RegexStrategy(),
+        ]
+    )
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 class TestExtractionPipeline:
     """Test the multi-strategy extraction pipeline end-to-end."""
@@ -59,12 +64,9 @@ class TestExtractionPipeline:
     def test_pipeline_runs_all_strategies(self, pipeline, google_maps_html):
         """Higher-priority strategies should run first and populate results."""
         # StructuredData (priority=0) should extract JSON-LD name/phone
-        results = {}
         for strategy in pipeline:
             if strategy.can_handle(google_maps_html):
                 # Run synchronously-style check
-                result = None
-                import asyncio
                 # Use can_handle to confirm applicability
                 assert strategy.can_handle(google_maps_html)
         # If we got here, pipeline can_handle check passes
@@ -98,18 +100,17 @@ class TestExtractionPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_merges_results(self, google_maps_html):
         """Pipeline should merge results from multiple strategies."""
-        pipeline = create_pipeline([
-            StructuredDataStrategy(),
-            RegexStrategy(),
-        ])
+        pipeline = create_pipeline(
+            [
+                StructuredDataStrategy(),
+                RegexStrategy(),
+            ]
+        )
         best: StrategyResult | None = None
         for strategy in pipeline:
             result = await strategy.extract(google_maps_html, "https://example.com")
             if result:
-                if best:
-                    best = best.merge_with(result)
-                else:
-                    best = result
+                best = best.merge_with(result) if best else result
         assert best is not None
         assert best.name == "Joe's Pizza"
         # JSON-LD phone should be preserved
@@ -150,7 +151,9 @@ class TestCircuitBreakerIntegration:
         """Circuit.can_execute should return False when OPEN."""
         cb = CircuitBreaker(
             source="test_source",
-            config=CircuitBreakerConfig(failure_threshold=2, window_seconds=60.0, open_duration_seconds=30.0),
+            config=CircuitBreakerConfig(
+                failure_threshold=2, window_seconds=60.0, open_duration_seconds=30.0
+            ),
         )
         for _ in range(2):
             await cb.record_failure()
@@ -161,7 +164,9 @@ class TestCircuitBreakerIntegration:
         """Success in HALF_OPEN state should close the circuit."""
         cb = CircuitBreaker(
             source="test_source",
-            config=CircuitBreakerConfig(failure_threshold=1, window_seconds=60.0, open_duration_seconds=30.0),
+            config=CircuitBreakerConfig(
+                failure_threshold=1, window_seconds=60.0, open_duration_seconds=30.0
+            ),
         )
         await cb.record_failure()
         assert cb.state == CircuitState.OPEN
@@ -217,25 +222,29 @@ class TestLeadScoringIntegration:
 
     def test_score_caps_at_100(self):
         """Total score should never exceed 100."""
+        from datetime import datetime
+
         from leadforge_shared.scoring import ContactInput, SocialProfileInput
-        from datetime import datetime, timezone
-        scored = calculate_lead_score(ScoringInput(
-            website_status="FOUND",
-            website=None,  # weak website
-            contacts=[
-                ContactInput(type="EMAIL"),
-                ContactInput(type="WHATSAPP"),
-                ContactInput(type="PHONE"),
-            ],
-            social_profiles=[
-                SocialProfileInput(platform="FACEBOOK", last_activity_at=datetime.now(timezone.utc)),
-                SocialProfileInput(platform="INSTAGRAM", last_activity_at=datetime.now(timezone.utc)),
-            ],
-            rating=4.8,
-            review_count=1000,
-            has_phone=True,
-            has_address=True,
-        ))
+
+        scored = calculate_lead_score(
+            ScoringInput(
+                website_status="FOUND",
+                website=None,  # weak website
+                contacts=[
+                    ContactInput(type="EMAIL"),
+                    ContactInput(type="WHATSAPP"),
+                    ContactInput(type="PHONE"),
+                ],
+                social_profiles=[
+                    SocialProfileInput(platform="FACEBOOK", last_activity_at=datetime.now(UTC)),
+                    SocialProfileInput(platform="INSTAGRAM", last_activity_at=datetime.now(UTC)),
+                ],
+                rating=4.8,
+                review_count=1000,
+                has_phone=True,
+                has_address=True,
+            )
+        )
         assert scored.score <= 100
 
     def test_determinism(self):
@@ -270,6 +279,7 @@ class TestFullPipelineFlow:
 
         # Step 2: Build ScoringInput from extracted data
         from leadforge_shared.scoring import ContactInput
+
         contacts = []
         if result.phone:
             contacts.append(ContactInput(type="PHONE"))
@@ -304,6 +314,7 @@ class TestFullPipelineFlow:
 
         # Step 2: Score
         from leadforge_shared.scoring import ContactInput, SocialProfileInput
+
         contacts = [ContactInput(type="EMAIL"), ContactInput(type="PHONE")]
         socials = [
             SocialProfileInput(platform="FACEBOOK", last_activity_at=None),

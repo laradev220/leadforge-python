@@ -7,29 +7,30 @@ directly and use Mock for the Page-dependent ones.
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Lazy import — the module depends on playwright.async_api which may not be
 # installed in all test environments.
 pytest.importorskip("playwright")
 
 from leadforge_scraper_core.human_simulation import (
-    jitter,
-    human_delay,
     _bezier_path,
-    human_move_mouse,
     human_click,
+    human_delay,
+    human_move_mouse,
     human_scroll,
     human_scroll_into_view,
     human_type,
+    jitter,
     simulate_reading,
     slowly_scroll_feed,
     wait_and_click,
 )
 
-
 # ── jitter ────────────────────────────────────────────────────────────────────
+
 
 class TestJitter:
     """Tests for the jitter() timing function."""
@@ -72,6 +73,7 @@ class TestJitter:
 
 
 # ── _bezier_path ──────────────────────────────────────────────────────────────
+
 
 class TestBezierPath:
     """Tests for the _bezier_path() pure function."""
@@ -123,6 +125,7 @@ class TestBezierPath:
 
 # ── human_delay ───────────────────────────────────────────────────────────────
 
+
 class TestHumanDelay:
     """Tests for human_delay() - timing only (page param tested with mock)."""
 
@@ -162,6 +165,7 @@ class TestHumanDelay:
 
 
 # ── human_move_mouse ──────────────────────────────────────────────────────────
+
 
 class TestHumanMoveMouse:
     """Tests for human_move_mouse() with mocked Page."""
@@ -204,6 +208,7 @@ class TestHumanMoveMouse:
 
 # ── human_click ───────────────────────────────────────────────────────────────
 
+
 class TestHumanClick:
     """Tests for human_click() with mocked Page."""
 
@@ -231,6 +236,7 @@ class TestHumanClick:
 
 # ── human_scroll ──────────────────────────────────────────────────────────────
 
+
 class TestHumanScroll:
     """Tests for human_scroll() with mocked Page."""
 
@@ -249,6 +255,7 @@ class TestHumanScroll:
     @pytest.mark.asyncio
     async def test_scrolls_up(self, mock_page: MagicMock) -> None:
         import re
+
         await human_scroll(mock_page, 300, max_steps=4, direction="up")
         # All scrollBy calls should contain a negative y value
         for call_args in mock_page.evaluate.call_args_list:
@@ -267,15 +274,14 @@ class TestHumanScroll:
 
 # ── human_scroll_into_view ────────────────────────────────────────────────────
 
+
 class TestHumanScrollIntoView:
     """Tests for human_scroll_into_view() with mocked Page."""
 
     @pytest.fixture
     def mock_element(self) -> MagicMock:
         el = MagicMock()
-        el.bounding_box = AsyncMock(
-            return_value={"x": 100, "y": 200, "width": 300, "height": 50}
-        )
+        el.bounding_box = AsyncMock(return_value={"x": 100, "y": 200, "width": 300, "height": 50})
         el.scroll_into_view_if_needed = AsyncMock()
         return el
 
@@ -307,6 +313,7 @@ class TestHumanScrollIntoView:
 
 # ── human_type ────────────────────────────────────────────────────────────────
 
+
 class TestHumanType:
     """Tests for human_type() with mocked Page."""
 
@@ -333,6 +340,7 @@ class TestHumanType:
 
 # ── simulate_reading ──────────────────────────────────────────────────────────
 
+
 class TestSimulateReading:
     """Tests for simulate_reading() with mocked Page."""
 
@@ -349,6 +357,7 @@ class TestSimulateReading:
 
 
 # ── slowly_scroll_feed ────────────────────────────────────────────────────────
+
 
 class TestSlowlyScrollFeed:
     """Tests for slowly_scroll_feed() with mocked Page."""
@@ -373,15 +382,14 @@ class TestSlowlyScrollFeed:
 
 # ── wait_and_click ────────────────────────────────────────────────────────────
 
+
 class TestWaitAndClick:
     """Tests for wait_and_click() with mocked Page."""
 
     @pytest.fixture
     def mock_element(self) -> MagicMock:
         el = MagicMock()
-        el.bounding_box = AsyncMock(
-            return_value={"x": 100, "y": 200, "width": 100, "height": 40}
-        )
+        el.bounding_box = AsyncMock(return_value={"x": 100, "y": 200, "width": 100, "height": 40})
         return el
 
     @pytest.fixture
@@ -412,8 +420,6 @@ class TestWaitAndClick:
     @pytest.mark.asyncio
     async def test_handles_timeout(self) -> None:
         mock_page = MagicMock()
-        mock_page.wait_for_selector = AsyncMock(
-            side_effect=Exception("timeout")
-        )
+        mock_page.wait_for_selector = AsyncMock(side_effect=Exception("timeout"))
         result = await wait_and_click(mock_page, ".btn")
         assert result is False

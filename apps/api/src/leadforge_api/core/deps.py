@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, status
 import jwt
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from fastapi import Depends, Header, HTTPException, status
 from leadforge_database import get_session
 from leadforge_database.models import User, UserRole
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from leadforge_api.core.security import decode_token
 
 DBSession = Annotated[AsyncSession, Depends(get_session)]

@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from leadforge_database.models import User
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from leadforge_api.core.errors import conflict, unauthorized, bad_request
+from leadforge_api.core.errors import bad_request, conflict, unauthorized
 from leadforge_api.core.security import hash_password, verify_password
-from leadforge_database.models import User
 
 
-async def register(
-    session: AsyncSession, email: str, password: str, full_name: str | None
-) -> User:
+async def register(session: AsyncSession, email: str, password: str, full_name: str | None) -> User:
     result = await session.execute(select(User).where(User.email == email))
     if result.scalar_one_or_none() is not None:
         raise conflict("Email already registered")

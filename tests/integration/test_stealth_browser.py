@@ -8,12 +8,13 @@ Tests that the Playwright-based stealth browser:
 
 from __future__ import annotations
 
-import pytest
+import contextlib
 
+import pytest
 from playwright.async_api import async_playwright
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def stealth_browser():
@@ -51,13 +52,20 @@ async def check_automation_detection(page):
 async def check_bot_signals(page):
     """Check for common bot detection text on the page."""
     content = await page.content()
-    bot_signals = ["unusual traffic", "captcha", "cf-browser-verification",
-                   "sorry", "automated queries", "access denied"]
+    bot_signals = [
+        "unusual traffic",
+        "captcha",
+        "cf-browser-verification",
+        "sorry",
+        "automated queries",
+        "access denied",
+    ]
     content_lower = content.lower()
     return [s for s in bot_signals if s in content_lower]
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 class TestStealthBrowserLaunch:
     """Test stealth browser launch configuration."""
@@ -66,10 +74,8 @@ class TestStealthBrowserLaunch:
     async def test_launches_without_errors(self, stealth_browser):
         """Browser should launch successfully with stealth arguments."""
         assert stealth_browser is not None
-        try:
+        with contextlib.suppress(AttributeError):
             assert not stealth_browser.is_closed
-        except AttributeError:
-            pass
 
     @pytest.mark.asyncio
     async def test_navigator_webdriver_undefined(self, stealth_browser):
@@ -81,7 +87,7 @@ class TestStealthBrowserLaunch:
         try:
             await page.goto("data:text/html,<h1>Test</h1>", wait_until="domcontentloaded")
             webdriver_val = await page.evaluate("() => navigator.webdriver")
-            assert webdriver_val != True, "navigator.webdriver should not be True"
+            assert not webdriver_val, "navigator.webdriver should not be True"
         finally:
             await context.close()
 
@@ -93,9 +99,9 @@ class TestStealthBrowserLaunch:
         try:
             await page.goto("data:text/html,<h1>Test</h1>", wait_until="domcontentloaded")
             webdriver = await page.evaluate("() => navigator.webdriver")
-            assert webdriver != True, "Automation detected (webdriver=True)"
+            assert not webdriver, "Automation detected (webdriver=True)"
             detection = await check_automation_detection(page)
-            assert 'webdriver_true' not in detection
+            assert "webdriver_true" not in detection
         finally:
             await context.close()
 
@@ -128,7 +134,7 @@ class TestBotDetectionEvasion:
             )
             detection = await check_automation_detection(page)
             bot_signals = await check_bot_signals(page)
-            assert 'webdriver_true' not in detection, f"Automation detected: {detection}"
+            assert "webdriver_true" not in detection, f"Automation detected: {detection}"
             assert len(bot_signals) == 0, f"Bot signals found: {bot_signals}"
         finally:
             await context.close()
@@ -154,9 +160,11 @@ class TestBotDetectionEvasion:
         context = await stealth_browser.new_context()
         page = await context.new_page()
         blocked = []
+
         async def block_images(route):
             blocked.append(route.request.url)
             await route.abort()
+
         await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,css}", block_images)
         try:
             await page.goto(

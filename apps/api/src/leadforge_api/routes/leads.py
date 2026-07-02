@@ -10,7 +10,7 @@ from leadforge_api.core.deps import CurrentUserId, DBSession
 from leadforge_api.core.pagination import get_pagination
 from leadforge_api.core.response import paginated, success
 from leadforge_api.schemas import LeadResponse
-from leadforge_api.services import business_service, lead_service
+from leadforge_api.services import lead_service
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 

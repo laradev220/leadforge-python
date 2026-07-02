@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import pytest
-
 from leadforge_scraper_core.exceptions import (
-    ScraperError,
-    RateLimitError,
-    ProxyError,
-    ParseError,
     CircuitOpenError,
+    ParseError,
+    ProxyError,
+    RateLimitError,
+    ScraperError,
 )
 from leadforge_scraper_core.strategies.base import StrategyResult
 
@@ -96,7 +95,6 @@ class TestCacheIntegration:
     async def test_cache_set_and_get(self) -> None:
         pytest.importorskip("fakeredis")
         import fakeredis.aioredis
-
         from leadforge_scraper_core.cache import RedisHTMLCache
 
         client = fakeredis.aioredis.FakeRedis(decode_responses=False)
@@ -113,7 +111,6 @@ class TestCacheIntegration:
     async def test_different_ua_different_key(self) -> None:
         pytest.importorskip("fakeredis")
         import fakeredis.aioredis
-
         from leadforge_scraper_core.cache import RedisHTMLCache
 
         client = fakeredis.aioredis.FakeRedis(decode_responses=False)
@@ -129,7 +126,6 @@ class TestCacheIntegration:
     async def test_invalidate(self) -> None:
         pytest.importorskip("fakeredis")
         import fakeredis.aioredis
-
         from leadforge_scraper_core.cache import RedisHTMLCache
 
         client = fakeredis.aioredis.FakeRedis(decode_responses=False)

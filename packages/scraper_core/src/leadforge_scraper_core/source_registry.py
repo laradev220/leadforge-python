@@ -12,57 +12,56 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from leadforge_scraper_core.google_maps import MapsBusiness, search_google_maps
-from leadforge_scraper_core.osm import search_osm
 from leadforge_scraper_core.directories import (
-    search_yellow_pages_pk,
-    search_hotfrog_pk,
     search_cybo_pk,
+    search_hotfrog_pk,
     search_kompass_pk,
+    search_yellow_pages_pk,
 )
-from leadforge_scraper_core.directories_global import search_yelp, search_yell_uk
 from leadforge_scraper_core.directories_country import (
+    # FR
+    search_annuaire_entreprises,
+    search_bizify,
+    search_brabys,
+    search_canada411,
+    # CA
+    search_canada_one,
+    # DE
+    search_das_oertliche,
+    search_europages,
+    # GB
+    search_free_index,
+    search_go_yellow,
+    # ZA
+    search_hellopeter,
+    search_indiamart,
+    # IN
+    search_justdial,
+    search_kompass_france,
     # US
     search_manta,
     search_merchant_circle,
-    # GB
-    search_free_index,
-    search_bizify,
-    search_thomson_local,
-    # CA
-    search_canada_one,
-    search_canada411,
-    # AU
-    search_true_local,
-    search_start_local,
-    # DE
-    search_das_oertliche,
-    search_go_yellow,
-    search_stadtbranchenbuch,
-    # FR
-    search_annuaire_entreprises,
-    search_kompass_france,
-    search_europages,
-    # IN
-    search_justdial,
-    search_sulekha,
-    search_indiamart,
     # AE
     search_middle_east_yp,
-    search_yellowpages_ae,
+    search_mulk_pk,
     search_mymidlist,
-    # SG
-    search_yelu_sg,
-    search_streetdirectory,
-    # ZA
-    search_hellopeter,
-    search_brabys,
     # PK (supplement)
     search_pak_business_world,
+    search_stadtbranchenbuch,
+    search_start_local,
+    search_streetdirectory,
+    search_sulekha,
+    search_thomson_local,
+    # AU
+    search_true_local,
+    search_yellowpages_ae,
+    # SG
+    search_yelu_sg,
     search_ypages_pk,
-    search_mulk_pk,
 )
-
+from leadforge_scraper_core.directories_global import search_yell_uk, search_yelp
+from leadforge_scraper_core.google_maps import MapsBusiness, search_google_maps
+from leadforge_scraper_core.osm import search_osm
 
 SourceFn = Callable[[str, str], Coroutine[Any, Any, list[MapsBusiness]]]
 
