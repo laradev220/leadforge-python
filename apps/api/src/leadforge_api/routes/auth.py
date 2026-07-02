@@ -9,9 +9,11 @@ from leadforge_api.core.response import success
 from leadforge_api.core.security import create_access_token
 from leadforge_api.schemas import (
     AuthResponse,
+    ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 from leadforge_api.services import auth_service
@@ -36,3 +38,23 @@ async def login(body: LoginRequest, session: DBSession) -> dict:
 @router.get("/me", response_model=None)
 async def me(user: CurrentUser) -> dict:
     return success(UserResponse.model_validate(user).model_dump(mode="json"))
+
+
+@router.put("/me", response_model=None)
+async def update_me(
+    body: UpdateProfileRequest, user_id: CurrentUserId, session: DBSession
+) -> dict:
+    updated = await auth_service.update_profile(
+        session, user_id, full_name=body.full_name, email=body.email,
+    )
+    return success(UserResponse.model_validate(updated).model_dump(mode="json"))
+
+
+@router.put("/password", response_model=None)
+async def change_password(
+    body: ChangePasswordRequest, user_id: CurrentUserId, session: DBSession
+) -> dict:
+    await auth_service.change_password(
+        session, user_id, body.current_password, body.new_password,
+    )
+    return success({"changed": True})

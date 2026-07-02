@@ -744,19 +744,19 @@ async def _do_search_google_maps(keyword: str, location: str) -> list[MapsBusine
 async def search_google_maps(keyword: str, location: str) -> list[MapsBusiness]:
     """Main entry point — search Google Maps with self-healing infrastructure.
 
-    Implements a 120-second timeout for the entire operation.
+    Implements a 300-second timeout for the entire operation.
     """
     try:
         return await asyncio.wait_for(
             _retrying_search(keyword, location),
-            timeout=120.0,
+            timeout=300.0,
         )
     except TimeoutError:
-        logger.error(
+        logger.warning(
             "google_maps.timeout",
             keyword=keyword,
             location=location,
-            timeout_seconds=120,
+            timeout_seconds=300,
         )
         return []
     except CircuitOpenError as exc:

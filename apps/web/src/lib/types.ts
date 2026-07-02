@@ -1,0 +1,269 @@
+// Types matching backend response shape
+
+export type SearchJobStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type WebsiteStatus = "UNKNOWN" | "FOUND" | "NOT_FOUND" | "INVALID";
+
+export type ContactType =
+  | "EMAIL"
+  | "PHONE"
+  | "WHATSAPP"
+  | "CONTACT_FORM"
+  | "FACEBOOK"
+  | "INSTAGRAM"
+  | "LINKEDIN"
+  | "YOUTUBE";
+
+export type ContactSource =
+  | "MAPS"
+  | "WEBSITE"
+  | "SOCIAL"
+  | "DIRECTORY"
+  | "MANUAL";
+
+export type SocialPlatform =
+  | "FACEBOOK"
+  | "INSTAGRAM"
+  | "LINKEDIN"
+  | "YOUTUBE"
+  | "TIKTOK"
+  | "TWITTER";
+
+export type LeadGrade = "A+" | "A" | "B" | "C" | "D" | "F";
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: "USER" | "ADMIN";
+  created_at: string;
+}
+
+export interface AuthSuccess {
+  user: User;
+  token: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload extends LoginPayload {
+  full_name?: string;
+}
+
+export interface SearchJob {
+  id: string;
+  user_id: string;
+  keyword: string;
+  location: string;
+  radius_km: number | null;
+  country: string | null;
+  status: SearchJobStatus;
+  total_discovered: number;
+  total_enriched: number;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface Business {
+  id: string;
+  external_id: string | null;
+  name: string;
+  category: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  rating: number | null;
+  review_count: number | null;
+  source: string | null;
+  website_status: WebsiteStatus;
+  is_claimed: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Website {
+  id: string;
+  business_id: string;
+  url: string;
+  domain: string | null;
+  ssl_enabled: boolean | null;
+  is_reachable: boolean | null;
+  http_status: number | null;
+  load_time_ms: number | null;
+  mobile_friendly: boolean | null;
+  seo_score: number | null;
+  last_checked_at: string | null;
+}
+
+export interface Contact {
+  id: string;
+  business_id: string;
+  type: ContactType;
+  value: string;
+  source: ContactSource;
+  confidence_score: number;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface SocialProfile {
+  id: string;
+  business_id: string;
+  platform: SocialPlatform;
+  profile_url: string;
+  username: string | null;
+  followers: number | null;
+  following: number | null;
+  posts_count: number | null;
+  bio: string | null;
+  website: string | null;
+  public_email: string | null;
+  public_phone: string | null;
+  last_activity_at: string | null;
+}
+
+export interface SocialProfileWithBusiness extends SocialProfile {
+  created_at: string;
+  business_name: string | null;
+  business_city: string | null;
+}
+
+export interface SocialProfileListFilters {
+  page?: number;
+  limit?: number;
+  platform?: SocialPlatform;
+  q?: string;
+  min_followers?: number;
+  sort_by?: "followers" | "posts_count" | "created_at";
+  sort_dir?: "asc" | "desc";
+}
+
+export interface SearchJobWithBusinesses extends SearchJob {
+  businesses?: Array<{
+    id: string;
+    business: Business;
+  }>;
+}
+
+export interface LeadScore {
+  id: string;
+  business_id: string;
+  score: number;
+  grade: LeadGrade | null;
+  best_contact_method: string | null;
+  website_opportunity_score: number;
+  social_activity_score: number;
+  contact_quality_score: number;
+  review_score: number;
+  business_validation_score: number;
+  notes: string | null;
+  calculated_at: string;
+}
+
+export interface Lead {
+  business: Business;
+  lead_score: LeadScore | null;
+  contacts: Contact[];
+  social_profiles: SocialProfile[];
+  website: Website | null;
+}
+
+export interface DashboardStats {
+  businesses: number;
+  websitesFound: number;
+  emailsFound: number;
+  socialProfilesFound: number;
+  highValueLeads: number;
+}
+
+export type GradeDistribution = Record<LeadGrade, number>;
+
+export type ExportFormat = "CSV" | "JSON" | "XLSX";
+
+export type ExportStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface ExportFilters {
+  search_job_id?: string;
+  grade?: LeadGrade;
+  min_score?: number;
+  city?: string;
+  country?: string;
+  website_status?: WebsiteStatus;
+}
+
+export interface ExportRecord {
+  id: string;
+  user_id: string;
+  format: ExportFormat;
+  file_path: string | null;
+  total_records: number;
+  status: ExportStatus;
+  created_at: string;
+}
+
+export interface LeadListFilters {
+  page?: number;
+  limit?: number;
+  score_min?: number;
+  score_max?: number;
+  grade?: LeadGrade;
+  website_status?: WebsiteStatus;
+  best_contact_method?: string;
+  city?: string;
+  country?: string;
+}
+
+export interface BusinessListFilters {
+  page?: number;
+  limit?: number;
+  name?: string;
+  city?: string;
+  country?: string;
+  category?: string;
+  website_status?: WebsiteStatus;
+  min_rating?: number;
+  max_rating?: number;
+}
+
+export interface PaginatedResponse<T> {
+  success: true;
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
+export interface SingleResponse<T> {
+  success: true;
+  data: T;
+}
+
+export interface ApiError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    context?: Record<string, unknown>;
+  };
+}

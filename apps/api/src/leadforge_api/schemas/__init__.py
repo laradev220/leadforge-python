@@ -59,6 +59,18 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class UpdateProfileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str | None = Field(default=None, validation_alias=AliasChoices("fullName", "full_name"))
+    email: EmailStr | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+
 # ---------- Search Jobs ----------
 
 
@@ -170,6 +182,26 @@ class SocialProfileResponse(BaseModel):
     public_email: str | None
     public_phone: str | None
     last_activity_at: datetime | None
+
+
+class SocialProfileWithBusinessResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    business_id: UUID
+    platform: SocialPlatform
+    profile_url: str
+    username: str | None
+    followers: int | None
+    following: int | None
+    posts_count: int | None
+    bio: str | None
+    website: str | None
+    public_email: str | None
+    public_phone: str | None
+    last_activity_at: datetime | None
+    created_at: datetime
+    business_name: str | None = None
+    business_city: str | None = None
 
 
 class LeadScoreResponse(BaseModel):

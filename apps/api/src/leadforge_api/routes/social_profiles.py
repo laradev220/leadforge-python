@@ -4,16 +4,74 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter
-from sqlalchemy import select
+from fastapi import APIRouter, Query
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
 
 from leadforge_api.core.deps import DBSession
 from leadforge_api.core.errors import not_found
-from leadforge_api.core.response import success
-from leadforge_api.schemas import SocialProfileResponse
-from leadforge_database.models import SocialProfile
+from leadforge_api.core.pagination import get_pagination
+from leadforge_api.core.response import paginated, success
+from leadforge_api.schemas import SocialProfileResponse, SocialProfileWithBusinessResponse
+from leadforge_database.models import Business, SocialProfile
 
 router = APIRouter(prefix="/social-profiles", tags=["social-profiles"])
+
+
+@router.get("", response_model=None)
+async def list_social_profiles(
+    session: DBSession,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    platform: str | None = None,
+    q: str | None = None,
+    min_followers: int | None = None,
+    sort_by: str = Query("followers", pattern="^(followers|posts_count|created_at)$"),
+    sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
+) -> dict:
+    pagination = get_pagination({"page": str(page), "limit": str(limit)})
+
+    where = []
+    if platform:
+        where.append(SocialProfile.platform == platform.upper())
+    if q:
+        where.append(
+            SocialProfile.username.ilike(f"%{q}%")
+            | SocialProfile.bio.ilike(f"%{q}%")
+            | Business.name.ilike(f"%{q}%")
+        )
+    if min_followers is not None:
+        where.append(SocialProfile.followers >= min_followers)
+
+    sort_col = getattr(SocialProfile, sort_by)
+    order = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
+
+    count_q = select(func.count()).select_from(SocialProfile).join(Business, SocialProfile.business_id == Business.id)
+    if where:
+        count_q = count_q.where(*where)
+    total = await session.scalar(count_q)
+
+    q_stmt = (
+        select(SocialProfile, Business.name, Business.city)
+        .join(Business, SocialProfile.business_id == Business.id)
+        .order_by(order)
+        .offset(pagination.skip)
+        .limit(pagination.limit)
+    )
+    if where:
+        q_stmt = q_stmt.where(*where)
+
+    result = await session.execute(q_stmt)
+    rows = result.all()
+
+    data = []
+    for sp, biz_name, biz_city in rows:
+        entry = SocialProfileWithBusinessResponse.model_validate(sp).model_dump(mode="json")
+        entry["business_name"] = biz_name
+        entry["business_city"] = biz_city
+        data.append(entry)
+
+    return paginated(data, int(total or 0), pagination.page, pagination.limit)
 
 
 @router.get("/{profile_id}", response_model=None)

@@ -13,8 +13,11 @@ from leadforge_scraper_core.contact import (
 from leadforge_scraper_core.google_maps import MapsBusiness
 from leadforge_scraper_core.social import (
     ExtractedSocial,
+    RichProfileData,
     extract_social_profiles,
+    extract_rich_profile_data,
     scrape_social_profile_for_contacts,
+    scrape_social_profile_rich,
 )
 from leadforge_scraper_core.source_registry import get_sources_for_country
 from leadforge_scraper_core.website import WebsiteAnalysis, analyze_website
@@ -102,5 +105,8 @@ __all__ = [
     "ExtractedContact",
     "extract_social_profiles",
     "ExtractedSocial",
+    "RichProfileData",
+    "extract_rich_profile_data",
     "scrape_social_profile_for_contacts",
+    "scrape_social_profile_rich",
 ]

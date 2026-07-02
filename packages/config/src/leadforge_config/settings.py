@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     playwright_headless: bool = Field(default=True, alias="PLAYWRIGHT_HEADLESS")
     playwright_proxy_url: str = Field(default="", alias="PLAYWRIGHT_PROXY_URL")
 
+    chrome_cdp_url: str = Field(default="http://localhost:9222", alias="CHROME_CDP_URL")
+    use_authenticated_session: bool = Field(default=True, alias="USE_AUTHENTICATED_SESSION")
+    social_scrape_delay_ms: int = Field(default=5000, alias="SOCIAL_SCRAPE_DELAY_MS")
+
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_json: bool = Field(default=True, alias="LOG_JSON")
 

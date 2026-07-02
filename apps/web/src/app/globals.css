@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme — warm paper, near-black ink */
+    --paper: 38 35% 96%;
+    --paper-deep: 38 30% 92%;
+    --paper-mute: 38 25% 89%;
+    --ink: 35 12% 14%;
+    --ink-soft: 35 8% 28%;
+    --ink-mute: 35 5% 48%;
+    --ink-ghost: 35 4% 65%;
+    --ember: 20 70% 50%;
+    --ember-soft: 20 60% 94%;
+    --moss: 150 25% 38%;
+    --line: 38 15% 82%;
+
+    --grain-opacity: 0.025;
+  }
+
+  .dark {
+    /* Dark theme — deep warm brown, parchment ink */
+    --paper: 30 6% 9%;
+    --paper-deep: 30 6% 12%;
+    --paper-mute: 30 6% 16%;
+    --ink: 38 30% 92%;
+    --ink-soft: 38 18% 78%;
+    --ink-mute: 35 8% 56%;
+    --ink-ghost: 35 6% 38%;
+    --ember: 22 80% 60%;
+    --ember-soft: 22 35% 18%;
+    --moss: 150 35% 55%;
+    --line: 30 6% 22%;
+
+    --grain-opacity: 0.05;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    @apply bg-ember text-paper;
+  }
+
+  /* Subtle grain texture for paper feel */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+@layer components {
+  .display {
+    @apply font-display tracking-tight;
+  }
+
+  .hairline {
+    @apply border-line;
+  }
+
+  /* Input field with editorial underline style */
+  .field {
+    @apply w-full bg-transparent border-0 border-b border-ink/30 px-0 py-3 text-base
+           placeholder:text-ink-ghost focus:outline-none focus:border-ember
+           transition-colors duration-200;
+  }
+
+  /* Editorial button - text-only with underline reveal */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 text-sm font-medium text-ink
+           relative px-1 py-1 transition-colors hover:text-ember;
+  }
+  .btn-ghost::after {
+    content: "";
+    @apply absolute left-0 right-0 bottom-0 h-px bg-current origin-left
+           scale-x-0 transition-transform duration-300 ease-out;
+  }
+  .btn-ghost:hover::after {
+    @apply scale-x-100;
+  }
+
+  /* Solid button - sharp, intentional */
+  .btn-solid {
+    @apply inline-flex items-center justify-center gap-2 bg-ink text-paper
+           px-5 py-3 text-sm font-medium tracking-wide
+           transition-all duration-200 hover:bg-ember
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+           focus-visible:outline-ember disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 border border-ink
+           text-ink px-5 py-3 text-sm font-medium tracking-wide
+           transition-all duration-200 hover:bg-ink hover:text-paper
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* Status pill - lowercase, no rounded pill cliché */
+  .status {
+    @apply inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider;
+  }
+  .status-dot {
+    @apply h-1.5 w-1.5 rounded-full;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .grid-noise {
+    background-image:
+      linear-gradient(to right, hsl(var(--ink) / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--ink) / 0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+}

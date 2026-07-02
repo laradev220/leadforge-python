@@ -17,6 +17,28 @@ from leadforge_shared.types import WebsiteJobData
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
 from sqlalchemy import select
 
+# Known business listing/directory sites that are NOT the business's own website
+_LISTING_SITES = frozenset({
+    "bizify.co.uk", "yell.com", "yell.co.uk", "thomsonlocal.com",
+    "freeindex.co.uk", "192.com", "yellowpages.com", "tripadvisor.com",
+    "trustpilot.com", "google.com", "facebook.com", "instagram.com",
+    "linkedin.com", "twitter.com", "x.com", "tiktok.com", "youtube.com",
+    "apple.com", "bing.com", "opendi.co.uk", "cylex-uk.co.uk",
+    "hotfrog.co.uk", "uksmallbusinessdirectory.co.uk", "tupalo.co.uk",
+    "golocal247.com", "brownbook.net", "storeboard.com",
+})
+
+
+def _is_listing_site(url: str) -> bool:
+    """Check if a URL belongs to a business listing/directory site."""
+    from urllib.parse import urlparse
+    try:
+        host = urlparse(url).hostname or ""
+        domain = host.removeprefix("www.").lower()
+        return any(domain == ls or domain.endswith("." + ls) for ls in _LISTING_SITES)
+    except Exception:
+        return False
+
 
 async def _discover_website(business_name: str, location: str | None = None) -> str | None:
     """Attempt to find a business website via Google search.
@@ -59,17 +81,18 @@ async def _discover_website(business_name: str, location: str | None = None) -> 
             ]
             for pattern in patterns:
                 matches = re.findall(pattern, html, re.I)
-                for m in matches[:5]:
-                    decoded = m.replace("/url?q=", "").split("&")[0] if "/url?q=" in m else m
-                    if (
-                        decoded.startswith("http")
-                        and "google.com" not in decoded
-                        and "youtube.com" not in decoded
-                        and "facebook.com" not in decoded
-                        and "instagram.com" not in decoded
-                        and "linkedin.com" not in decoded
-                    ):
-                        return decoded.split("?")[0]
+            for m in matches[:5]:
+                decoded = m.replace("/url?q=", "").split("&")[0] if "/url?q=" in m else m
+                if (
+                    decoded.startswith("http")
+                    and "google.com" not in decoded
+                    and "youtube.com" not in decoded
+                    and "facebook.com" not in decoded
+                    and "instagram.com" not in decoded
+                    and "linkedin.com" not in decoded
+                    and not _is_listing_site(decoded)
+                ):
+                    return decoded.split("?")[0]
 
             # Broader pattern: any link containing the business name
             name_slug = quote_plus(business_name.lower())
@@ -79,7 +102,12 @@ async def _discover_website(business_name: str, location: str | None = None) -> 
                 re.I,
             )
             for m in broad[:3]:
-                if m.startswith("http") and "google.com" not in m and "youtube.com" not in m:
+                if (
+                    m.startswith("http")
+                    and "google.com" not in m
+                    and "youtube.com" not in m
+                    and not _is_listing_site(m)
+                ):
                     return m.split("?")[0]
 
     except Exception as exc:
