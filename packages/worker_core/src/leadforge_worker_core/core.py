@@ -80,7 +80,7 @@ async def get_arq_pool() -> ArqRedis:
     if _arq_pool is None:
         settings = get_settings()
         _arq_pool = await create_pool(
-            RedisSettings(host=settings.redis_host, port=settings.redis_port)
+            RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None)
         )
     return _arq_pool
 

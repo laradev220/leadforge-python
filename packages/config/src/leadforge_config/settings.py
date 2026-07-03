@@ -44,6 +44,7 @@ class Settings(BaseSettings):
 
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
+    redis_password: str = Field(default="", alias="REDIS_PASSWORD")
 
     jwt_secret: str = Field(default="dev-secret", alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")

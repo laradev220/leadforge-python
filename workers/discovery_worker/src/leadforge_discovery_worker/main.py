@@ -192,7 +192,7 @@ def main():
             worker_instance = Worker(
                 functions=[discovery],
                 queue_name="discovery",
-                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port),
+                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None),
                 max_jobs=settings.scraper_concurrency,
             )
             worker_instance.run()

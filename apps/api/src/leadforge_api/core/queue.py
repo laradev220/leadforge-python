@@ -13,7 +13,7 @@ _pool: ArqRedis | None = None
 
 def _settings() -> RedisSettings:
     s = get_settings()
-    return RedisSettings(host=s.redis_host, port=s.redis_port)
+    return RedisSettings(host=s.redis_host, port=s.redis_port, password=s.redis_password or None)
 
 
 async def get_pool() -> ArqRedis:
