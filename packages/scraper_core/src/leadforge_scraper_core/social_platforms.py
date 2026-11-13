@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from leadforge_shared.types import SocialPlatform
+from leadforge_shared.utils import looks_like_phone
 
 # Social platform domains mapping
 SOCIAL_DOMAINS = {
@@ -199,6 +200,8 @@ def is_valid_phone_number(phone: str) -> bool:
     # Remove common formatting characters
     cleaned = re.sub(r"[^\d\+\-\(\)\s]", "", phone)
 
-    # Basic length validation
+    # Basic length validation + reject bare digit runs (page/tracking IDs)
     digits_only = re.sub(r"[^\d]", "", cleaned)
-    return not (len(digits_only) < 7 or len(digits_only) > 15)
+    if len(digits_only) < 7 or len(digits_only) > 15:
+        return False
+    return looks_like_phone(phone)

@@ -9,7 +9,21 @@ import phonenumbers
 from phonenumbers import NumberParseException
 
 _PHONE_DIGITS_RE = re.compile(r"\D")
+_PHONE_SEPARATOR_RE = re.compile(r"[\s\-().]")
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def looks_like_phone(value: str) -> bool:
+    """Heuristic filter for page text that only resembles a phone number.
+
+    Bare digit runs (analytics IDs, timestamps, Facebook page IDs) are not
+    phone numbers; real ones carry a ``+`` or separators.
+    """
+    stripped = value.strip()
+    digits = _PHONE_DIGITS_RE.sub("", stripped)
+    if not 7 <= len(digits) <= 15:
+        return False
+    return stripped.startswith("+") or bool(_PHONE_SEPARATOR_RE.search(stripped))
 
 
 def normalize_phone(phone: str, region: str | None = None) -> str:

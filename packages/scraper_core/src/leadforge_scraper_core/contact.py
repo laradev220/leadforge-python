@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from urllib.parse import urljoin
 
 import structlog
-from leadforge_shared.utils import is_valid_email, normalize_phone
+from leadforge_shared.utils import is_valid_email, looks_like_phone, normalize_phone
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.base import fetch_html
@@ -51,19 +52,20 @@ async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
         score = 90 if is_high and is_biz else (60 if is_biz else 30)
         contacts.append(ExtractedContact("EMAIL", email, score))
 
-    # Extract phones from visible text
+    # Extract phones from visible text only: <script>/<style> content is full
+    # of timestamps and tracking IDs that look like long digit runs.
+    for tag in tree.css("script, style, noscript"):
+        tag.decompose()
     text = tree.body.text() if tree.body else ""
-    phones = PHONE_RE.findall(text)
-    for p in phones:
-        cleaned = p.strip()
-        if len(cleaned) < 7 or cleaned in seen:
+    for candidate in PHONE_RE.findall(text):
+        cleaned = candidate.strip()
+        if cleaned in seen or not looks_like_phone(cleaned):
             continue
-        seen.add(cleaned)
-        try:
-            normalized = normalize_phone(cleaned)
-            contacts.append(ExtractedContact("PHONE", normalized, 70))
-        except Exception:
+        normalized = normalize_phone(cleaned)
+        if normalized in seen:
             continue
+        seen.update((cleaned, normalized))
+        contacts.append(ExtractedContact("PHONE", normalized, 70))
 
     # Extract WhatsApp links
     whatsapp = WHATSAPP_RE.findall(html)
@@ -74,7 +76,7 @@ async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
     form = tree.css_first("form")
     if form is not None and form.attrs:
         action = form.attrs.get("action", "") or ""
-        url = f"{base_url}/{action.lstrip('/')}" if action else base_url
+        url = urljoin(base_url, action) if action else base_url
         contacts.append(ExtractedContact("CONTACT_FORM", url, 70))
 
     return contacts
@@ -96,6 +98,4 @@ async def crawl_website(url: str) -> str:
 def get_priority_urls(base_url: str) -> list[str]:
     """Return priority page URLs for contact extraction."""
     paths = ["/contact", "/about", "/contact-us", "/about-us", "/team", "/support"]
-    from urllib.parse import urljoin
-
     return [urljoin(base_url, p) for p in paths]

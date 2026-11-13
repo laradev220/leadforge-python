@@ -106,6 +106,11 @@ async def discovery_processor(data: DiscoveryJobData, logger):
                 count=len(businesses),
             )
 
+            # Google Maps/directory rows frequently omit city/country; the
+            # searched location is the best available fallback.
+            location_city = (job.location or "").split(",")[0].strip() or None
+            location_country = country.upper() if country else None
+
             discovered_count = 0
             to_enqueue: list[uuid.UUID] = []
 
@@ -129,6 +134,8 @@ async def discovery_processor(data: DiscoveryJobData, logger):
                             value = _normalize_phone(value, phone_region)
                         if value is not None and hasattr(existing, key):
                             setattr(existing, key, value)
+                    if not existing.city and location_city:
+                        existing.city = location_city
 
                     website_url = getattr(biz, "website", None)
                     if website_url:
@@ -154,9 +161,9 @@ async def discovery_processor(data: DiscoveryJobData, logger):
                         name=biz.name,
                         category=biz.category,
                         address=biz.address,
-                        city=biz.city,
+                        city=biz.city or location_city,
                         state=biz.state,
-                        country=biz.country,
+                        country=biz.country or location_country,
                         postal_code=biz.postal_code,
                         latitude=biz.latitude,
                         longitude=biz.longitude,

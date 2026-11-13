@@ -511,6 +511,20 @@ wheels = [
 name = "leadforge"
 version = "1.0.0"
 source = { editable = "." }
+dependencies = [
+    { name = "api" },
+    { name = "contact-worker" },
+    { name = "discovery-worker" },
+    { name = "export-worker" },
+    { name = "leadforge-config" },
+    { name = "leadforge-database" },
+    { name = "leadforge-scraper-core" },
+    { name = "leadforge-shared" },
+    { name = "leadforge-worker-core" },
+    { name = "scoring-worker" },
+    { name = "social-worker" },
+    { name = "website-worker" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -525,6 +539,20 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "api", editable = "apps/api" },
+    { name = "contact-worker", editable = "workers/contact_worker" },
+    { name = "discovery-worker", editable = "workers/discovery_worker" },
+    { name = "export-worker", editable = "workers/export_worker" },
+    { name = "leadforge-config", editable = "packages/config" },
+    { name = "leadforge-database", editable = "packages/database" },
+    { name = "leadforge-scraper-core", editable = "packages/scraper_core" },
+    { name = "leadforge-shared", editable = "packages/shared" },
+    { name = "leadforge-worker-core", editable = "packages/worker_core" },
+    { name = "scoring-worker", editable = "workers/scoring_worker" },
+    { name = "social-worker", editable = "workers/social_worker" },
+    { name = "website-worker", editable = "workers/website_worker" },
+]
 
 [package.metadata.requires-dev]
 dev = [

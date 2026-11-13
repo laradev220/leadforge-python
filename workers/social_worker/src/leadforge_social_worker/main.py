@@ -352,7 +352,6 @@ async def social_processor(data: SocialJobData, log):
                         "following",
                         "posts_count",
                         "bio",
-                        "profile_image_url",
                     ):
                         val = contacts.get(field_name)
                         if val and not getattr(db_sp, field_name):
@@ -387,12 +386,17 @@ async def _scrape_profile(
     from leadforge_scraper_core.base import fetch_html
     from leadforge_scraper_core.social import scrape_social_profile_rich
 
+    # Newly-created profiles hold the raw string until refreshed from the DB;
+    # existing ones hold a SocialPlatform enum. Normalize before use.
+    platform = sp.platform.value if hasattr(sp.platform, "value") else str(sp.platform)
+    profile_url = sp.profile_url
+
     if use_cdp and browser:
         async with browser.tab_context(sp.profile_url) as tab:
             await asyncio.sleep(1.5 + secrets.randbelow(3))
             html = await tab.get_html()
         if html and len(html) > 200:
-            return await scrape_social_profile_rich(html, sp.profile_url, sp.platform.value)
+            return await scrape_social_profile_rich(html, profile_url, platform)
         return {}
 
     # Fallback: httpx/Playwright — fetch HTML then use rich scraper
@@ -402,7 +406,7 @@ async def _scrape_profile(
             sp.profile_url, use_playwright=True, source="social_scraper", logger=log
         )
         if html and len(html) > 200:
-            return await scrape_social_profile_rich(html, sp.profile_url, sp.platform.value)
+            return await scrape_social_profile_rich(html, profile_url, platform)
     except Exception as exc:
         log.debug("httpx_scrape.failed", error=str(exc))
     return {}

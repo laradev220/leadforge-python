@@ -4,6 +4,20 @@ version = "1.0.0"
 description = "Queue-driven enrichment pipeline for discovering, enriching, scoring, and exporting business leads"
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
+dependencies = [
+    "leadforge-config",
+    "leadforge-shared",
+    "leadforge-database",
+    "leadforge-worker-core",
+    "leadforge-scraper-core",
+    "api",
+    "discovery-worker",
+    "website-worker",
+    "contact-worker",
+    "social-worker",
+    "scoring-worker",
+    "export-worker",
+]
 
 [tool.uv.workspace]
 members = [
@@ -39,6 +53,13 @@ leadforge-shared = { workspace = true }
 leadforge-database = { workspace = true }
 leadforge-worker-core = { workspace = true }
 leadforge-scraper-core = { workspace = true }
+api = { workspace = true }
+discovery-worker = { workspace = true }
+website-worker = { workspace = true }
+contact-worker = { workspace = true }
+social-worker = { workspace = true }
+scoring-worker = { workspace = true }
+export-worker = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

@@ -15,7 +15,7 @@ from typing import Any
 import structlog
 from leadforge_shared.dates import parse_iso_datetime, parse_relative_phrase
 from leadforge_shared.types import SocialPlatform
-from leadforge_shared.utils import is_valid_email, normalize_phone
+from leadforge_shared.utils import is_valid_email, looks_like_phone, normalize_phone
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.social_platforms import (
@@ -168,7 +168,7 @@ def _extract_phones(text: str) -> dict[str, str]:
         # Filter out short codes that look like order/reference numbers
         if len(digits_only) <= 6:
             continue
-        if not is_valid_phone_number(cleaned):
+        if not looks_like_phone(cleaned) or not is_valid_phone_number(cleaned):
             continue
         try:
             phone = normalize_phone(cleaned)
