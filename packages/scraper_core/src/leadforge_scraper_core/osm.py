@@ -8,6 +8,8 @@ whitelisting, so endpoints are tried in order.
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import structlog
 
@@ -124,28 +126,33 @@ async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
             "out center 60;"
         )
 
-        for endpoint in _OVERPASS_ENDPOINTS:
-            try:
-                res = await client.post(endpoint, data={"data": query})
-            except Exception as exc:
-                logger.warning("osm.overpass_error", endpoint=endpoint, error=str(exc))
-                continue
-            if res.status_code != 200:
-                logger.warning("osm.overpass_status", endpoint=endpoint, status=res.status_code)
-                continue
-            try:
-                elements = res.json().get("elements", [])
-            except ValueError:
-                continue
+        # Public Overpass instances are frequently overloaded; retry the
+        # mirror list once before giving up.
+        for attempt in range(2):
+            for endpoint in _OVERPASS_ENDPOINTS:
+                try:
+                    res = await client.post(endpoint, data={"data": query})
+                except Exception as exc:
+                    logger.warning("osm.overpass_error", endpoint=endpoint, error=str(exc))
+                    continue
+                if res.status_code != 200:
+                    logger.warning("osm.overpass_status", endpoint=endpoint, status=res.status_code)
+                    continue
+                try:
+                    elements = res.json().get("elements", [])
+                except ValueError:
+                    continue
 
-            businesses = [b for b in map(_to_business, elements) if b is not None]
-            logger.info(
-                "osm.search_complete",
-                keyword=keyword,
-                location=location,
-                endpoint=endpoint,
-                results=len(businesses),
-            )
-            return businesses
+                businesses = [b for b in map(_to_business, elements) if b is not None]
+                logger.info(
+                    "osm.search_complete",
+                    keyword=keyword,
+                    location=location,
+                    endpoint=endpoint,
+                    results=len(businesses),
+                )
+                return businesses
+            if attempt == 0:
+                await asyncio.sleep(1.5)
 
     return []

@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import re
 import secrets
+from collections import Counter
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote_plus, urlparse
@@ -69,7 +70,18 @@ async def _search_social_by_name_httpx(business_name: str) -> list[dict]:
             if resp.status_code != 200:
                 return profiles
 
-            hrefs = re.findall(r'href="(https?://[^"]+?)"', resp.text)
+            # Google serves JS-gated results to plain HTTP clients; fail loudly
+            # instead of pretending the search ran.
+            if "enablejs" in resp.text or "captcha" in resp.text.lower():
+                logger.warning(
+                    "social_search.blocked",
+                    engine="google-http",
+                    hint="use CHROME_CDP_URL with a logged-in browser, or rely on website links",
+                )
+                return profiles
+
+            # Google wraps organic links as /url?q=<target>
+            hrefs = re.findall(r'href="(?:/url\?q=)?(https?://[^"&]+)', resp.text)
             for href in hrefs:
                 if href in seen:
                     continue
@@ -117,8 +129,11 @@ async def _search_social_by_name_cdp(
 
         if not html or len(html) < 200:
             return profiles
+        if "captcha" in html.lower() or "unusual traffic" in html.lower():
+            logger.warning("social_search.blocked", engine="google-cdp")
+            return profiles
 
-        hrefs = re.findall(r'href="(https?://[^"]+?)"', html)
+        hrefs = re.findall(r'href="(?:/url\?q=)?(https?://[^"&]+)', html)
         for href in hrefs:
             if href in seen:
                 continue
@@ -334,6 +349,14 @@ async def social_processor(data: SocialJobData, log):
             await browser.disconnect()
 
     # ── Phase 4: Batch update DB ──────────────────────────────────────────
+    # Boilerplate numbers (support lines, tracking widgets) repeat across a
+    # business's profiles; only persist phones unique to one profile.
+    phone_counts: Counter[str] = Counter()
+    for sp in saved_profiles:
+        phone = (getattr(sp, "_contacts", None) or {}).get("public_phone")
+        if phone:
+            phone_counts[str(phone)] += 1
+
     async with get_session_ctx() as session:
         for sp in saved_profiles:
             try:
@@ -344,6 +367,12 @@ async def social_processor(data: SocialJobData, log):
                     updated = False
                     for field_name in ("public_email", "public_phone", "website"):
                         val = contacts.get(field_name)
+                        if (
+                            field_name == "public_phone"
+                            and val
+                            and phone_counts.get(str(val), 0) > 1
+                        ):
+                            continue
                         if val and not getattr(db_sp, field_name):
                             setattr(db_sp, field_name, val)
                             updated = True

@@ -28,20 +28,25 @@ class TestSourceRegistryStructure:
         assert count == 1, f"PK appears {count} times (should be 1)"
 
     def test_pk_has_all_sources(self) -> None:
-        """PK should have 9 sources after dedup (2 Google+OSM + 7 directories)."""
+        """PK keeps only sources that resolve and return real listings.
+
+        Removed: yellowpages.com.pk/hotfrog.pk (NXDOMAIN) and
+        ypages.pk/mulk.pk/pakbusinessworld.com (JS pages that only yield the
+        site title, which produced junk leads).
+        """
         pk_sources = SOURCE_REGISTRY["PK"]
-        assert len(pk_sources) == 9, f"PK has {len(pk_sources)} sources, expected 9"
+        assert len(pk_sources) == 4, f"PK has {len(pk_sources)} sources, expected 4"
 
     def test_pk_includes_directory_sources(self) -> None:
         """PK should include Pakistan-specific directories (not just Google Maps + OSM)."""
         pk_labels = {label for label, _ in SOURCE_REGISTRY["PK"]}
-        assert "Yellow Pages PK" in pk_labels
-        assert "Hotfrog PK" in pk_labels
+        assert "Yellow Pages PK" not in pk_labels  # domain is NXDOMAIN
+        assert "Hotfrog PK" not in pk_labels  # domain is NXDOMAIN
+        assert "Ypages.pk" not in pk_labels  # JS page, yielded only its title
+        assert "Mulk.pk" not in pk_labels
+        assert "Pak Business World" not in pk_labels
         assert "Cybo PK" in pk_labels
         assert "Kompass PK" in pk_labels
-        assert "Pak Business World" in pk_labels
-        assert "Ypages.pk" in pk_labels
-        assert "Mulk.pk" in pk_labels
 
     def test_pk_includes_google_maps(self) -> None:
         """PK should still include Google Maps."""
@@ -86,9 +91,9 @@ class TestGetSourcesForCountry:
 
     def test_returns_pk_sources(self) -> None:
         sources = get_sources_for_country("PK")
-        assert len(sources) == 9
+        assert len(sources) == 4
         labels = {label for label, _ in sources}
-        assert "Yellow Pages PK" in labels
+        assert "Cybo PK" in labels
 
     def test_returns_us_sources(self) -> None:
         sources = get_sources_for_country("US")
@@ -186,7 +191,7 @@ class TestRegisterSource:
         sources = get_sources_for_country("PK")
         labels = {label for label, _ in sources}
         assert "New PK Source" in labels
-        assert "Yellow Pages PK" in labels  # Original sources preserved
+        assert "Cybo PK" in labels  # Original sources preserved
 
     def test_prepend_new_source(self) -> None:
         register_source("PK", "First Source", self._dummy_source, prepend=True)

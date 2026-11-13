@@ -17,9 +17,7 @@ from leadforge_config import get_settings
 
 from leadforge_scraper_core.directories import (
     search_cybo_pk,
-    search_hotfrog_pk,
     search_kompass_pk,
-    search_yellow_pages_pk,
 )
 from leadforge_scraper_core.directories_country import (
     # FR
@@ -46,10 +44,8 @@ from leadforge_scraper_core.directories_country import (
     search_merchant_circle,
     # AE
     search_middle_east_yp,
-    search_mulk_pk,
     search_mymidlist,
     # PK (supplement)
-    search_pak_business_world,
     search_stadtbranchenbuch,
     search_start_local,
     search_streetdirectory,
@@ -60,7 +56,6 @@ from leadforge_scraper_core.directories_country import (
     search_yellowpages_ae,
     # SG
     search_yelu_sg,
-    search_ypages_pk,
 )
 from leadforge_scraper_core.directories_global import search_yell_uk, search_yelp
 from leadforge_scraper_core.google_maps import MapsBusiness, search_google_maps
@@ -158,15 +153,13 @@ SOURCE_REGISTRY: dict[str, list[tuple[str, SourceFn]]] = {
         ("Google Maps", search_google_maps),
         ("OpenStreetMap", search_osm),
     ],
-    # Pakistan — supplement existing directories
+    # Pakistan — only sources that resolve and return real listings.
+    # Removed: yellowpages.com.pk / hotfrog.pk (NXDOMAIN),
+    #          ypages.pk / mulk.pk / pakbusinessworld.com (JS-rendered pages
+    #          that only yield site titles), so they are not enabled by default.
     "PK": [
-        ("Yellow Pages PK", search_yellow_pages_pk),
-        ("Hotfrog PK", search_hotfrog_pk),
         ("Cybo PK", search_cybo_pk),
         ("Kompass PK", search_kompass_pk),
-        ("Pak Business World", search_pak_business_world),
-        ("Ypages.pk", search_ypages_pk),
-        ("Mulk.pk", search_mulk_pk),
         ("Google Maps", search_google_maps),
         ("OpenStreetMap", search_osm),
     ],

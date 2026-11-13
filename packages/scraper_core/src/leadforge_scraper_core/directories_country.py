@@ -678,6 +678,7 @@ async def search_pak_business_world(keyword: str, location: str) -> list[MapsBus
         "pak_business_world",
         keyword,
         location,
+        use_playwright=True,
         item_selector=".result, .listing, .card, .business-card, [class*='listing']",
         name_selector="h3, h2, .title, .name, .business-name",
     )
@@ -691,6 +692,7 @@ async def search_ypages_pk(keyword: str, location: str) -> list[MapsBusiness]:
         "ypages_pk",
         keyword,
         location,
+        use_playwright=True,
         item_selector=".result, .listing, .business-listing, .card, [class*='result']",
         name_selector="h3, .title, .business-name, .name",
     )
@@ -704,6 +706,7 @@ async def search_mulk_pk(keyword: str, location: str) -> list[MapsBusiness]:
         "mulk_pk",
         keyword,
         location,
+        use_playwright=True,
         item_selector=".result, .listing, .card, .business-card, [class*='listing']",
         name_selector="h3, h2, .title, .name, .business-name",
     )

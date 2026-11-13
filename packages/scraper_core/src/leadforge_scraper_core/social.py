@@ -116,6 +116,33 @@ async def extract_social_profiles(html: str, base_url: str) -> list[ExtractedSoc
         except Exception:
             continue
 
+    # JSON-LD sameAs — common on local-business sites and more reliable than
+    # scraping footer links.
+    from urllib.parse import urlparse as _urlparse
+
+    for script in tree.css('script[type="application/ld+json"]'):
+        try:
+            data = json.loads(script.text() or "")
+        except Exception:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            for node in _iter_json_nodes(item):
+                same_as = node.get("sameAs")
+                values = [same_as] if isinstance(same_as, str) else same_as or []
+                for value in values:
+                    if not isinstance(value, str):
+                        continue
+                    parsed = _urlparse(value)
+                    platform = SOCIAL_DOMAINS.get(parsed.netloc.removeprefix("www."))
+                    if not platform or value in seen:
+                        continue
+                    seen.add(value)
+                    username = parsed.path.strip("/").split("/")[-1] or None
+                    profiles.append(ExtractedSocial(platform, value, username))
+
     for meta in tree.css('meta[property^="og:"], meta[name^="twitter:"]'):
         content = meta.attrs.get("content", "")
         if not content or not content.startswith("http"):
@@ -227,6 +254,16 @@ def _parse_count(text: str) -> int | None:
         return int(text)
     except ValueError:
         return None
+
+
+def _iter_json_nodes(node: dict[str, Any]):
+    """Yield the node plus anything inside ``@graph`` / nested objects."""
+    yield node
+    graph = node.get("@graph")
+    if isinstance(graph, list):
+        for child in graph:
+            if isinstance(child, dict):
+                yield child
 
 
 def _extract_from_json_ld(html: str) -> dict[str, Any]:

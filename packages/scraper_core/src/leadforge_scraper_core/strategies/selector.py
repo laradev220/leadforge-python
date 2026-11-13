@@ -67,6 +67,9 @@ class SelectorStrategy(ExtractionStrategy):
             "hotfrog.pk": "hotfrog_pk",
             "cybo.com": "cybo_pk",
             "kompass.com": "kompass_pk",
+            "ypages.pk": "ypages_pk",
+            "mulk.pk": "mulk_pk",
+            "pakbusinessworld.com": "pak_business_world",
             "yell.com": "yell_uk",
             "google.com": "google_maps",
         }
@@ -112,8 +115,16 @@ class SelectorStrategy(ExtractionStrategy):
                 sel_type = "css"  # default
                 sel = sel_spec
                 if isinstance(sel_spec, dict):
-                    sel_type = sel_spec.get("type", "css")
-                    sel = sel_spec.get("selector", "")
+                    # selectors.yaml uses {"css": "..."} / {"xpath": "..."}
+                    if "css" in sel_spec:
+                        sel_type, sel = "css", sel_spec["css"]
+                    elif "xpath" in sel_spec:
+                        sel_type, sel = "xpath", sel_spec["xpath"]
+                    else:
+                        sel_type = sel_spec.get("type", "css")
+                        sel = sel_spec.get("selector", "")
+                if not sel:
+                    continue
 
                 try:
                     if sel_type == "xpath":
@@ -166,7 +177,11 @@ class SelectorStrategy(ExtractionStrategy):
             els = root.xpath(xpath)
             if not els:
                 return None
-            text = els[0].text_content().strip()
+            first = els[0]
+            # lxml elements have itertext(); lxml returns plain strings for
+            # attribute/text() xpaths.
+            text = first if isinstance(first, str) else "".join(first.itertext())
+            text = text.strip()
             return text if text else None
         except Exception:
             return None
