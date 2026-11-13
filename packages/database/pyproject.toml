@@ -9,6 +9,7 @@ dependencies = [
     "psycopg2-binary>=2.9",
     "alembic>=1.13",
     "leadforge-config",
+    "leadforge-shared",
 ]
 
 [tool.hatch.build.targets.wheel]

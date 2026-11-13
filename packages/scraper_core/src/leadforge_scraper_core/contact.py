@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import structlog
 from leadforge_shared.utils import is_valid_email, normalize_phone
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.base import fetch_html
 

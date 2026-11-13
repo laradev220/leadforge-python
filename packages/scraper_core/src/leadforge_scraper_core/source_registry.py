@@ -9,8 +9,11 @@ The "default" key is used when no country-specific list exists.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Coroutine
 from typing import Any
+
+from leadforge_config import get_settings
 
 from leadforge_scraper_core.directories import (
     search_cybo_pk,
@@ -170,14 +173,38 @@ SOURCE_REGISTRY: dict[str, list[tuple[str, SourceFn]]] = {
 }
 
 
+def _slug(label: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", label.strip().lower()).strip("_")
+
+
+def _parse_enabled_sources(raw: str) -> dict[str, set[str]]:
+    """Parse ``"PK=yellow_pages_pk,hotfrog_pk;US=yelp"`` into per-country slugs."""
+    mapping: dict[str, set[str]] = {}
+    for chunk in raw.split(";"):
+        if "=" not in chunk:
+            continue
+        code, labels = chunk.split("=", 1)
+        slugs = {_slug(label) for label in labels.split(",") if label.strip()}
+        if code.strip() and slugs:
+            mapping[code.strip().upper()] = slugs
+    return mapping
+
+
 def get_sources_for_country(country_code: str | None) -> list[tuple[str, SourceFn]]:
-    """Return the list of source (label, callable) tuples for a country code.
+    """Return the source list for a country code.
 
     Falls back to ``"default"`` when the code is unknown or None.
+    ``ENABLED_SOURCES`` (e.g. ``"US=yelp,google_maps"``) narrows a country's
+    list when configured; countries without an entry keep all sources.
     """
-    if country_code and country_code.upper() in SOURCE_REGISTRY:
-        return SOURCE_REGISTRY[country_code.upper()]
-    return SOURCE_REGISTRY["default"]
+    key = country_code.upper() if country_code else ""
+    sources = list(SOURCE_REGISTRY.get(key, SOURCE_REGISTRY["default"]))
+
+    enabled = _parse_enabled_sources(get_settings().enabled_sources)
+    allowed = enabled.get(key)
+    if not allowed:
+        return sources
+    return [(label, fn) for label, fn in sources if _slug(label) in allowed]
 
 
 def get_registered_countries() -> list[str]:

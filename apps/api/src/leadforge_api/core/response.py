@@ -49,6 +49,6 @@ def paginated(data: list[Any], total: int, page: int, limit: int) -> dict[str, A
             "page": page,
             "limit": limit,
             "total": total,
-            "totalPages": (total + limit - 1) // limit,
+            "total_pages": (total + limit - 1) // limit,
         },
     }

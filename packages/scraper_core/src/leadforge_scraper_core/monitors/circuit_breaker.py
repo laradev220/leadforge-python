@@ -17,7 +17,7 @@ from enum import Enum
 from typing import Any
 
 import redis.asyncio as redis
-from leadforge_config import get_settings
+from leadforge_config import get_redis_client
 
 from leadforge_scraper_core.exceptions import CircuitOpenError
 
@@ -67,12 +67,7 @@ class CircuitBreaker:
         return len(recent) / (self.config.window_seconds / 60.0)
 
     async def _redis_key(self) -> tuple[str, str, str, redis.Redis]:
-        settings = get_settings()
-        client = redis.Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            decode_responses=True,
-        )
+        client = get_redis_client(decode_responses=True)
         state_key = f"{self._PREFIX}:state:{self.source}"
         failures_key = f"{self._PREFIX}:failures:{self.source}"
         opened_key = f"{self._PREFIX}:opened_at:{self.source}"

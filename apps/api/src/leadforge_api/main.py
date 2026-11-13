@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from leadforge_config import get_settings
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from leadforge_api.core.errors import AppError
@@ -44,10 +45,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def _cors_config() -> tuple[list[str], bool]:
+    """Resolve allowed origins + credentials.
+
+    A wildcard origin cannot be combined with credentials (browsers reject it),
+    so ``*`` explicitly disables credentials. In development without
+    ``CORS_ORIGINS`` we default to the local web app.
+    """
+    raw = os.getenv("CORS_ORIGINS", "").strip()
+    requested = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if "*" in requested:
+        return ["*"], False
+    if requested:
+        return requested, True
+    if not get_settings().is_production:
+        return ["http://localhost:3000", "http://127.0.0.1:3000"], True
+    return [], False
+
+
+_cors_origins, _cors_credentials = _cors_config()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

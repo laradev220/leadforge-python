@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import httpx
+import structlog
+from leadforge_config import get_settings
 
 from leadforge_scraper_core.contact import (
     ExtractedContact,
@@ -21,6 +23,8 @@ from leadforge_scraper_core.social import (
 )
 from leadforge_scraper_core.source_registry import get_sources_for_country
 from leadforge_scraper_core.website import WebsiteAnalysis, analyze_website
+
+logger = structlog.get_logger("scraper.registry")
 
 
 async def _guess_country(location: str) -> str | None:
@@ -54,29 +58,39 @@ async def search_businesses(
     keyword: str,
     location: str,
     country: str | None = None,
+    max_per_source: int | None = None,
 ) -> list[MapsBusiness]:
-    """Discover businesses from all registered sources for the given country.
+    """Discover businesses from all enabled sources for the given country.
 
     Args:
         keyword: Business category or keyword (e.g. "Dentist", "Restaurant").
         location: City / area string (e.g. "Houston", "London", "Lahore").
         country: ISO-3166-1 alpha-2 country code. When ``None``, the country
                  is inferred from *location* via Nominatim geocoding.
+        max_per_source: Cap per source (defaults to ``SCRAPER_MAX_RESULTS_PER_SEARCH``).
 
-    Returns:
-        Up to 20 deduplicated ``MapsBusiness`` records.
+    Returns deduplicated ``MapsBusiness`` records. A failing source is logged
+    and skipped instead of silently disappearing.
     """
-    resolved_country = country or await _guess_country(location)
+    resolved_country = (country or await _guess_country(location) or "").upper() or None
     sources = get_sources_for_country(resolved_country)
+    limit = max_per_source or get_settings().scraper_max_results_per_search
 
     all_results: list[MapsBusiness] = []
-    for _label, fn in sources:
+    for label, fn in sources:
         try:
             batch = await fn(keyword, location)
-            if batch:
-                all_results.extend(batch)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "source_failed",
+                source=label,
+                keyword=keyword,
+                location=location,
+                error=str(exc),
+            )
+            continue
+        if batch:
+            all_results.extend(batch[:limit])
 
     # Dedup by external_id — first occurrence wins
     seen: set[str] = set()
@@ -86,7 +100,15 @@ async def search_businesses(
             final.append(b)
             seen.add(b.external_id)
 
-    return final[:20]
+    logger.info(
+        "search_completed",
+        keyword=keyword,
+        location=location,
+        country=resolved_country,
+        sources=len(sources),
+        results=len(final),
+    )
+    return final
 
 
 __all__ = [

@@ -15,7 +15,7 @@ from urllib.parse import quote_plus
 
 import structlog
 from leadforge_shared.utils import make_ext_id
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
 from leadforge_scraper_core import metrics as scraper_metrics

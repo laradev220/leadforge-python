@@ -7,6 +7,11 @@ from leadforge_shared.constants import (
     SCRAPING_DEFAULTS,
     SOCIAL_PLATFORMS,
 )
+from leadforge_shared.dates import (
+    parse_iso_datetime,
+    parse_last_activity,
+    parse_relative_phrase,
+)
 from leadforge_shared.scoring import (
     ContactInput,
     ScoringInput,
@@ -21,8 +26,10 @@ from leadforge_shared.types import (
     ContactType,
     DiscoveryJobData,
     EnrichmentStatus,
+    ExportFilters,
     ExportFormat,
     ExportJobData,
+    ExportStatus,
     JobData,
     LeadGrade,
     QueueName,
@@ -55,8 +62,10 @@ __all__ = [
     "ContactType",
     "DiscoveryJobData",
     "EnrichmentStatus",
+    "ExportFilters",
     "ExportFormat",
     "ExportJobData",
+    "ExportStatus",
     "JobData",
     "LeadGrade",
     "QueueName",
@@ -78,4 +87,7 @@ __all__ = [
     "is_valid_email",
     "normalize_phone",
     "normalize_url",
+    "parse_iso_datetime",
+    "parse_last_activity",
+    "parse_relative_phrase",
 ]

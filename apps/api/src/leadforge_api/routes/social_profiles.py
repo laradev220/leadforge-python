@@ -7,11 +7,13 @@ from uuid import UUID
 from fastapi import APIRouter, Query
 from leadforge_database.models import Business, SocialProfile
 from sqlalchemy import func, select
+from sqlalchemy.sql.elements import ColumnElement
 
-from leadforge_api.core.deps import DBSession
+from leadforge_api.core.deps import CurrentUserId, DBSession
 from leadforge_api.core.errors import not_found
 from leadforge_api.core.pagination import get_pagination
 from leadforge_api.core.response import paginated, success
+from leadforge_api.core.tenancy import user_business_ids
 from leadforge_api.schemas import SocialProfileResponse, SocialProfileWithBusinessResponse
 
 router = APIRouter(prefix="/social-profiles", tags=["social-profiles"])
@@ -19,6 +21,7 @@ router = APIRouter(prefix="/social-profiles", tags=["social-profiles"])
 
 @router.get("", response_model=None)
 async def list_social_profiles(
+    user_id: CurrentUserId,
     session: DBSession,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
@@ -30,7 +33,7 @@ async def list_social_profiles(
 ) -> dict:
     pagination = get_pagination({"page": str(page), "limit": str(limit)})
 
-    where = []
+    where: list[ColumnElement[bool]] = [SocialProfile.business_id.in_(user_business_ids(user_id))]
     if platform:
         where.append(SocialProfile.platform == platform.upper())
     if q:
@@ -49,20 +52,18 @@ async def list_social_profiles(
         select(func.count())
         .select_from(SocialProfile)
         .join(Business, SocialProfile.business_id == Business.id)
+        .where(*where)
     )
-    if where:
-        count_q = count_q.where(*where)
     total = await session.scalar(count_q)
 
     q_stmt = (
         select(SocialProfile, Business.name, Business.city)
         .join(Business, SocialProfile.business_id == Business.id)
+        .where(*where)
         .order_by(order)
         .offset(pagination.skip)
         .limit(pagination.limit)
     )
-    if where:
-        q_stmt = q_stmt.where(*where)
 
     result = await session.execute(q_stmt)
     rows = result.all()
@@ -78,9 +79,12 @@ async def list_social_profiles(
 
 
 @router.get("/{profile_id}", response_model=None)
-async def get_social_profile(profile_id: str, session: DBSession) -> dict:
+async def get_social_profile(profile_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     result = await session.execute(
-        select(SocialProfile).where(SocialProfile.id == UUID(profile_id))
+        select(SocialProfile).where(
+            SocialProfile.id == UUID(profile_id),
+            SocialProfile.business_id.in_(user_business_ids(user_id)),
+        )
     )
     profile = result.scalar_one_or_none()
     if profile is None:

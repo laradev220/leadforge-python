@@ -19,7 +19,7 @@ from urllib.parse import quote_plus
 
 import structlog
 from leadforge_shared.utils import make_ext_id
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core import metrics as scraper_metrics
 from leadforge_scraper_core.base import fetch_html

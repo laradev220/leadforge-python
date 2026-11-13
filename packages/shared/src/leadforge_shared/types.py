@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SearchJobStatus(StrEnum):
@@ -68,6 +68,13 @@ class ExportFormat(StrEnum):
     JSON = "JSON"
 
 
+class ExportStatus(StrEnum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
 class LeadGrade(StrEnum):
     A_PLUS = "A+"
     A = "A"
@@ -122,10 +129,40 @@ class ScoringJobData(BaseModel):
     business_id: UUID
 
 
+class ExportFilters(BaseModel):
+    """Validated export filter contract.
+
+    Shared by the API (request validation) and the export worker so the two
+    sides cannot disagree on field names. Unknown keys are rejected: a typo
+    must fail loudly instead of being silently ignored.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    search_job_id: UUID | None = None
+    grade: LeadGrade | None = None
+    score_min: int | None = Field(default=None, ge=0, le=100)
+    score_max: int | None = Field(default=None, ge=0, le=100)
+    best_contact_method: ContactType | None = None
+    city: str | None = None
+    country: str | None = None
+    website_status: WebsiteStatus | None = None
+
+    @model_validator(mode="after")
+    def _check_score_range(self) -> ExportFilters:
+        if (
+            self.score_min is not None
+            and self.score_max is not None
+            and self.score_min > self.score_max
+        ):
+            raise ValueError("score_min must be less than or equal to score_max")
+        return self
+
+
 class ExportJobData(BaseModel):
     model_config = ConfigDict(extra="ignore")
     export_id: UUID
-    filters: dict[str, Any] | None = None
+    filters: ExportFilters | None = None
 
 
 JobData = (
@@ -146,4 +183,4 @@ class WorkerLog(BaseModel):
     duration_ms: int
     status: Literal["success", "failure"]
     error: str | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -2,70 +2,80 @@
 
 from __future__ import annotations
 
-from leadforge_database.models import Business, Contact, ContactType, LeadScore, SocialProfile
+from uuid import UUID
+
+from leadforge_database.models import (
+    Business,
+    Contact,
+    ContactType,
+    LeadScore,
+    SocialProfile,
+    WebsiteStatus,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-async def dashboard_stats(session: AsyncSession) -> dict:
-    (
-        businesses,
-        websites_found,
-        emails_found,
-        social_profiles_found,
-        high_value_leads,
-    ) = await asyncio_gather_count(session)
-    return {
-        "businesses": businesses,
-        "websitesFound": websites_found,
-        "emailsFound": emails_found,
-        "socialProfilesFound": social_profiles_found,
-        "highValueLeads": high_value_leads,
-    }
+from leadforge_api.core.tenancy import user_business_ids
 
 
-async def asyncio_gather_count(session: AsyncSession) -> tuple[int, int, int, int, int]:
-    return await _counts(session)
+async def dashboard_stats(session: AsyncSession, user_id: UUID) -> dict:
+    scope = Business.id.in_(user_business_ids(user_id))
 
-
-async def _counts(session: AsyncSession) -> tuple[int, int, int, int, int]:
-    businesses = await session.scalar(select(func.count()).select_from(Business)) or 0
+    businesses = await session.scalar(select(func.count()).select_from(Business).where(scope)) or 0
     websites_found = (
         await session.scalar(
-            select(func.count()).select_from(Business).where(Business.website_status == "FOUND")
+            select(func.count())
+            .select_from(Business)
+            .where(scope, Business.website_status == WebsiteStatus.FOUND)
         )
         or 0
     )
     emails_found = (
         await session.scalar(
-            select(func.count()).select_from(Contact).where(Contact.type == ContactType.EMAIL)
+            select(func.count())
+            .select_from(Contact)
+            .join(Business, Contact.business_id == Business.id)
+            .where(scope, Contact.type == ContactType.EMAIL)
         )
         or 0
     )
     social_profiles_found = (
-        await session.scalar(select(func.count()).select_from(SocialProfile)) or 0
-    )
-    high_value_leads = (
         await session.scalar(
-            select(func.count()).select_from(LeadScore).where(LeadScore.score >= 80)
+            select(func.count())
+            .select_from(SocialProfile)
+            .join(Business, SocialProfile.business_id == Business.id)
+            .where(scope)
         )
         or 0
     )
-    return (
-        int(businesses),
-        int(websites_found),
-        int(emails_found),
-        int(social_profiles_found),
-        int(high_value_leads),
+    high_value_leads = (
+        await session.scalar(
+            select(func.count())
+            .select_from(LeadScore)
+            .join(Business, LeadScore.business_id == Business.id)
+            .where(scope, LeadScore.score >= 80)
+        )
+        or 0
     )
+    return {
+        "businesses": int(businesses),
+        "websitesFound": int(websites_found),
+        "emailsFound": int(emails_found),
+        "socialProfilesFound": int(social_profiles_found),
+        "highValueLeads": int(high_value_leads),
+    }
 
 
-async def lead_distribution(session: AsyncSession) -> dict[str, int]:
+async def lead_distribution(session: AsyncSession, user_id: UUID) -> dict[str, int]:
+    scope = Business.id.in_(user_business_ids(user_id))
     grades = ["A+", "A", "B", "C", "D", "F"]
     distribution: dict[str, int] = {}
     for grade in grades:
         count = await session.scalar(
-            select(func.count()).select_from(LeadScore).where(LeadScore.grade == grade)
+            select(func.count())
+            .select_from(LeadScore)
+            .join(Business, LeadScore.business_id == Business.id)
+            .where(scope, LeadScore.grade == grade)
         )
         distribution[grade] = int(count or 0)
     return distribution

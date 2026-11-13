@@ -9,8 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 
-import redis.asyncio as redis
-from leadforge_config import get_settings
+from leadforge_config import get_redis_client
 
 
 class ProxyManager:
@@ -92,12 +91,7 @@ class ProxyManager:
             return []
 
         try:
-            settings = get_settings()
-            client = redis.Redis(
-                host=settings.redis_host,
-                port=settings.redis_port,
-                decode_responses=True,
-            )
+            client = get_redis_client(decode_responses=True)
             available = []
             for proxy in self._proxies:
                 is_bad = await client.exists(f"{self._BAD_PREFIX}:{self._hash_proxy(proxy)}")
@@ -114,8 +108,7 @@ class ProxyManager:
         Writes to the same per-proxy hash key that _filter_available reads from.
         """
         try:
-            settings = get_settings()
-            client = redis.Redis(host=settings.redis_host, port=settings.redis_port)
+            client = get_redis_client()
             key = f"{self._BAD_PREFIX}:{self._hash_proxy(proxy)}"
             await client.set(key, "1", ex=self._BAD_TTL)
             await client.aclose()
@@ -124,8 +117,7 @@ class ProxyManager:
 
     async def _mark_good(self, proxy: str) -> None:
         try:
-            settings = get_settings()
-            client = redis.Redis(host=settings.redis_host, port=settings.redis_port)
+            client = get_redis_client()
             key = f"{self._BAD_PREFIX}:{self._hash_proxy(proxy)}"
             await client.delete(key)
             await client.aclose()

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from leadforge_shared.types import (
     ContactSource,
     ContactType,
+    ExportFilters,
     ExportFormat,
     LeadGrade,
     SearchJobStatus,
@@ -238,7 +238,7 @@ class LeadResponse(BaseModel):
 class CreateExportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     format: ExportFormat
-    filters: dict[str, Any] | None = None
+    filters: ExportFilters | None = None
 
 
 class CreateExportResponse(BaseModel):

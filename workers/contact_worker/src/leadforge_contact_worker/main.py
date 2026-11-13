@@ -6,8 +6,8 @@ Google Maps) even when no website URL is available, rather than skipping entirel
 
 import asyncio
 import secrets
+from uuid import UUID
 
-from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Contact, ContactSource, ContactType
 from leadforge_scraper_core import crawl_website, extract_contacts, get_priority_urls
@@ -122,7 +122,7 @@ async def contact_processor(data: ContactJobData, logger):
     )
 
 
-worker = WorkerWrapper("contact", contact_processor)
+worker: WorkerWrapper[ContactJobData] = WorkerWrapper("contact", contact_processor)
 
 
 # ── Module-level arq function ──────────────────────────────────────────────
@@ -130,30 +130,15 @@ worker = WorkerWrapper("contact", contact_processor)
 
 async def contact(ctx: dict, business_id: str, website_url: str = "") -> None:
     """Arq entry point."""
-    data = ContactJobData(business_id=business_id, website_url=website_url)
+    data = ContactJobData(business_id=UUID(business_id), website_url=website_url)
     await worker(ctx, data)
 
 
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
-    import time
+    from leadforge_worker_core.core import run_worker
 
-    from arq import Worker
-    from arq.connections import RedisSettings
-
-    settings = get_settings()
-    while True:
-        try:
-            worker_instance = Worker(
-                functions=[contact],
-                queue_name="contact",
-                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None),
-                max_jobs=settings.scraper_concurrency,
-            )
-            worker_instance.run()
-        except Exception as e:
-            print(f"[contact] worker crashed: {e}, restarting in 3s...")
-            time.sleep(3)
+    run_worker("contact", contact)
 
 
 if __name__ == "__main__":

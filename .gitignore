@@ -24,6 +24,8 @@ build/
 *.swp
 .DS_Store
 *.log
+*.tsbuildinfo
+dump.rdb
 /exports/
 logs/
 alembic/__pycache__/

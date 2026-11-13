@@ -134,6 +134,8 @@ export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   INSTAGRAM: "Instagram",
   LINKEDIN: "LinkedIn",
   YOUTUBE: "YouTube",
+  TIKTOK: "TikTok",
+  TWITTER: "Twitter",
 };
 
 export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {

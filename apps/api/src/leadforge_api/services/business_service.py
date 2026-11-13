@@ -7,6 +7,8 @@ from uuid import UUID
 from leadforge_database.models import (
     Business,
     Contact,
+    ContactSource,
+    ContactType,
     LeadScore,
     SocialProfile,
     Website,
@@ -18,10 +20,12 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from leadforge_api.core.errors import not_found
 from leadforge_api.core.queue import enqueue_website
+from leadforge_api.core.tenancy import user_business_ids
 
 
 async def list_businesses(
     session: AsyncSession,
+    user_id: UUID,
     *,
     name: str | None,
     city: str | None,
@@ -33,7 +37,7 @@ async def list_businesses(
     page: int,
     limit: int,
 ) -> tuple[list[Business], int]:
-    where: list[ColumnElement[bool]] = []
+    where: list[ColumnElement[bool]] = [Business.id.in_(user_business_ids(user_id))]
     if name:
         where.append(Business.name.ilike(f"%{name}%"))
     if city:
@@ -65,10 +69,13 @@ async def list_businesses(
     return list(result.scalars()), int(total or 0)
 
 
-async def get_by_id(session: AsyncSession, business_id: UUID) -> Business:
+async def get_by_id(session: AsyncSession, user_id: UUID, business_id: UUID) -> Business:
     result = await session.execute(
         select(Business)
-        .where(Business.id == business_id)
+        .where(
+            Business.id == business_id,
+            Business.id.in_(user_business_ids(user_id)),
+        )
         .options(
             selectinload(Business.website),
             selectinload(Business.contacts),
@@ -82,11 +89,8 @@ async def get_by_id(session: AsyncSession, business_id: UUID) -> Business:
     return business
 
 
-async def re_enrich(session: AsyncSession, business_id: UUID) -> None:
-    result = await session.execute(select(Business).where(Business.id == business_id))
-    business = result.scalar_one_or_none()
-    if business is None:
-        raise not_found("Business not found")
+async def re_enrich(session: AsyncSession, user_id: UUID, business_id: UUID) -> None:
+    await get_by_id(session, user_id, business_id)
     await enqueue_website(business_id)
 
 
@@ -95,7 +99,8 @@ async def get_website(session: AsyncSession, business_id: UUID) -> Website | Non
     return result.scalar_one_or_none()
 
 
-async def list_contacts(session: AsyncSession, business_id: UUID) -> list[Contact]:
+async def list_contacts(session: AsyncSession, user_id: UUID, business_id: UUID) -> list[Contact]:
+    await get_by_id(session, user_id, business_id)
     result = await session.execute(
         select(Contact)
         .where(Contact.business_id == business_id)
@@ -105,13 +110,18 @@ async def list_contacts(session: AsyncSession, business_id: UUID) -> list[Contac
 
 
 async def add_contact(
-    session: AsyncSession, business_id: UUID, contact_type, value: str
+    session: AsyncSession,
+    user_id: UUID,
+    business_id: UUID,
+    contact_type: ContactType,
+    value: str,
 ) -> Contact:
+    await get_by_id(session, user_id, business_id)
     contact = Contact(
         business_id=business_id,
         type=contact_type,
         value=value,
-        source="MANUAL",
+        source=ContactSource.MANUAL,
     )
     session.add(contact)
     await session.commit()
@@ -119,7 +129,10 @@ async def add_contact(
     return contact
 
 
-async def list_social_profiles(session: AsyncSession, business_id: UUID) -> list[SocialProfile]:
+async def list_social_profiles(
+    session: AsyncSession, user_id: UUID, business_id: UUID
+) -> list[SocialProfile]:
+    await get_by_id(session, user_id, business_id)
     result = await session.execute(
         select(SocialProfile)
         .where(SocialProfile.business_id == business_id)

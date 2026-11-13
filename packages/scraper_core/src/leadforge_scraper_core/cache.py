@@ -11,7 +11,7 @@ import hashlib
 from typing import Any
 
 import redis.asyncio as redis
-from leadforge_config import get_settings
+from leadforge_config import get_redis_client
 
 
 class RedisHTMLCache:
@@ -26,84 +26,80 @@ class RedisHTMLCache:
         ttl_seconds: int = _DEFAULT_TTL,
     ) -> None:
         self._client = redis_client
+        self._owns_client = redis_client is None
         self._ttl = ttl_seconds
 
-    async def _get_client(self) -> redis.Redis:
-        if self._client:
-            return self._client
-        settings = get_settings()
-        return redis.Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            decode_responses=False,  # we store bytes
-        )
+    def _get_client(self) -> redis.Redis:
+        if self._client is None:
+            self._client = get_redis_client()
+        return self._client
+
+    async def close(self) -> None:
+        """Close the owned connection (no-op for injected clients)."""
+        if self._client is not None and self._owns_client:
+            await self._client.aclose()
+            self._client = None
+
+    def _url_hash(self, url: str) -> str:
+        return hashlib.sha256(url.encode()).hexdigest()[:32]
 
     def _make_key(self, url: str, user_agent: str) -> str:
         """Create a deterministic cache key."""
-        url_hash = hashlib.sha256(url.encode()).hexdigest()[:32]
         ua_hash = hashlib.sha256(user_agent.encode()).hexdigest()[:16]
-        return f"{self._PREFIX}:{url_hash}:{ua_hash}"
+        return f"{self._PREFIX}:{self._url_hash(url)}:{ua_hash}"
 
     async def get(self, url: str, user_agent: str) -> bytes | None:
-        """Return cached HTML bytes if present, None if not cached or no-cache header detected."""
+        """Return cached HTML bytes if present, None if not cached or no-cache requested."""
         try:
-            client = await self._get_client()
+            client = self._get_client()
             key = self._make_key(url, user_agent)
 
-            # Check for no-cache marker
-            no_cache_key = f"{key}:no_cache"
-            if await client.exists(no_cache_key):
-                await client.aclose()
+            if await client.exists(f"{key}:no_cache"):
                 return None
 
-            data = await client.get(key)
-            await client.aclose()
-            return data
+            return await client.get(key)
         except Exception:
             return None
 
     async def set(self, url: str, user_agent: str, html: bytes | str) -> None:
         """Cache HTML bytes with TTL."""
         try:
-            client = await self._get_client()
+            client = self._get_client()
             key = self._make_key(url, user_agent)
             if isinstance(html, str):
                 html = html.encode("utf-8")
             await client.set(key, html, ex=self._ttl)
             # Clear any no-cache marker
             await client.delete(f"{key}:no_cache")
-            await client.aclose()
         except Exception:
             pass
 
     async def invalidate(self, url: str, user_agent: str | None = None) -> None:
         """Force invalidate a cached page (optionally filtered by user_agent)."""
         try:
-            client = await self._get_client()
+            client = self._get_client()
             if user_agent:
-                key = self._make_key(url, user_agent)
-                await client.delete(key)
-            else:
-                pattern = f"{self._PREFIX}:*"
-                cursor = 0
-                while True:
-                    cursor, batch = await client.scan(cursor, match=pattern, count=100)
-                    for k in batch:
-                        if k.startswith(f"{self._PREFIX}:{url}"):
-                            await client.delete(k)
-                    if cursor == 0:
-                        break
-            await client.aclose()
+                await client.delete(self._make_key(url, user_agent))
+                return
+
+            # Keys are hashed, so match on the URL-hash component.
+            pattern = f"{self._PREFIX}:{self._url_hash(url)}:*"
+            cursor = 0
+            while True:
+                cursor, batch = await client.scan(cursor, match=pattern, count=100)
+                if batch:
+                    await client.delete(*batch)
+                if cursor == 0:
+                    break
         except Exception:
             pass
 
     async def mark_no_cache(self, url: str, user_agent: str) -> None:
         """Mark a URL as explicitly no-cache for this user agent."""
         try:
-            client = await self._get_client()
+            client = self._get_client()
             key = self._make_key(url, user_agent)
-            await client.set(f"{key}:no_cache", "1", ex=300)  # 5-minute no-cache marker
-            await client.aclose()
+            await client.set(f"{key}:no_cache", "1", ex=300)  # 5-minute marker
         except Exception:
             pass
 
@@ -115,14 +111,7 @@ class RedisHTMLCache:
         *,
         force_refresh: bool = False,
     ) -> str | None:
-        """Get from cache or call fetch_fn to get fresh HTML.
-
-        Args:
-            url: URL to fetch.
-            user_agent: User agent string (part of cache key).
-            fetch_fn: Async callable that returns HTML string.
-            force_refresh: If True, skip cache and fetch fresh.
-        """
+        """Get from cache or call fetch_fn to get fresh HTML."""
         if not force_refresh:
             cached = await self.get(url, user_agent)
             if cached:
@@ -137,10 +126,10 @@ class RedisHTMLCache:
         return html
 
     async def stats(self) -> dict[str, Any]:
-        """Return cache statistics (hits, misses, size)."""
+        """Return cache statistics (estimated size, key count)."""
         try:
-            client = await self._get_client()
-            keys = []
+            client = self._get_client()
+            keys: list[bytes] = []
             cursor = 0
             while True:
                 cursor, batch = await client.scan(cursor, match=f"{self._PREFIX}:*", count=1000)
@@ -149,15 +138,12 @@ class RedisHTMLCache:
                     break
 
             total_keys = len(keys)
-            # Estimate memory (rough)
-            ttl_values = await client.mget(keys[:100]) if keys else []
-            avg_size = sum(len(v or b"") for v in ttl_values) / max(len(ttl_values), 1)
-            estimated_bytes = int(avg_size * total_keys)
-
-            await client.aclose()
+            sample = keys[:100]
+            values = await client.mget(sample) if sample else []
+            avg_size = sum(len(v or b"") for v in values) / max(len(values), 1)
             return {
                 "total_keys": total_keys,
-                "estimated_bytes": estimated_bytes,
+                "estimated_bytes": int(avg_size * total_keys),
                 "ttl_seconds": self._ttl,
             }
         except Exception:

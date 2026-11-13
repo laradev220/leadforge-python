@@ -12,8 +12,8 @@ This module replaces the original base.py. Key improvements:
 
 from __future__ import annotations
 
+import hashlib
 import logging
-import random
 import time
 from typing import Any
 
@@ -78,6 +78,7 @@ async def fetch_html(
     source: str = "unknown",
     logger: Any = None,
     retry_count: int = 0,
+    force_refresh: bool = False,
 ) -> str | None:
     """Fetch HTML with retry, rate limiting, proxy rotation, and caching.
 
@@ -90,12 +91,25 @@ async def fetch_html(
         source: Source name (for structured logging and metrics).
         logger: Optional structlog logger for this request.
         retry_count: Current retry number (incremented by tenacity).
+        force_refresh: Skip the cache and fetch a fresh copy.
+
+    Returns cached HTML when available; the cache is keyed per URL, so the
+    user agent is derived from the domain to keep keys stable across calls.
     """
     from leadforge_scraper_core import metrics as scraper_metrics
 
     settings = get_settings()
     timeout = timeout_ms or settings.scraper_request_timeout_ms / 1000.0
-    ua = random.choice(USER_AGENTS)
+    domain = _extract_domain(url)
+    ua = _user_agent_for(domain)
+
+    cache = get_cache()
+    cache_key_ua = f"{ua}|playwright" if use_playwright else ua
+    if not force_refresh:
+        cached = await cache.get(url, cache_key_ua)
+        if cached is not None:
+            scraper_metrics.record_cache_hit()
+            return cached.decode("utf-8", errors="replace")
 
     log = logger or _get_logger()
     start_time = time.monotonic()
@@ -103,7 +117,6 @@ async def fetch_html(
     # Enforce global concurrency
     async with _global_limiter:
         # Enforce per-domain rate limiting
-        domain = _extract_domain(url)
         if domain:
             await _domain_limiter.acquire(domain)
 
@@ -126,15 +139,8 @@ async def fetch_html(
             duration_ms = int((time.monotonic() - start_time) * 1000)
 
             if html:
-                # Check cache headers
-                cache = get_cache()
-                cached = await cache.get(url, ua)
-                if cached:
-                    scraper_metrics.record_cache_hit()
-                else:
-                    scraper_metrics.record_cache_miss()
-                    await cache.set(url, ua, html)
-
+                scraper_metrics.record_cache_miss()
+                await cache.set(url, cache_key_ua, html)
                 scraper_metrics.record_scrape_success(source, duration_ms)
                 if proxy:
                     await proxy_manager.record_success(proxy)
@@ -306,9 +312,7 @@ async def _do_fetch(
             if exc.response.status_code == 429:
                 raise RateLimitError("429 received", source="httpx", url=url)
             raise
-        except Exception as exc:
-            if not _is_retryable_exception(exc):
-                raise
+        except Exception:
             raise
 
     # Fall back to Playwright with stealth techniques
@@ -354,6 +358,14 @@ async def _do_fetch(
             raise
         # Not wrapping in ProxyError — proxy is optional, this is a generic fetch failure
         raise
+
+
+def _user_agent_for(domain: str) -> str:
+    """Stable per-domain user agent, so cache keys are reproducible."""
+    if not domain:
+        return USER_AGENTS[0]
+    index = int(hashlib.sha256(domain.encode()).hexdigest()[:8], 16) % len(USER_AGENTS)
+    return USER_AGENTS[index]
 
 
 def _extract_domain(url: str) -> str:

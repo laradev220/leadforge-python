@@ -15,7 +15,7 @@ from __future__ import annotations
 import time
 
 import redis.asyncio as redis
-from leadforge_config import get_settings
+from leadforge_config import get_redis_client
 
 from leadforge_scraper_core.cache import get_cache
 
@@ -39,12 +39,7 @@ class SelectorTracker:
     async def _get_client(self) -> redis.Redis:
         if self._client:
             return self._client
-        settings = get_settings()
-        return redis.Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            decode_responses=True,
-        )
+        return get_redis_client(decode_responses=True)
 
     def _key(self, source: str, field: str, selector: str) -> str:
         """Redis key for a specific selector's stats."""

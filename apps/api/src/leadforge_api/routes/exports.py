@@ -21,7 +21,7 @@ async def create_export(
     body: CreateExportRequest, user_id: CurrentUserId, session: DBSession
 ) -> dict:
     exp = await export_service.create_export(
-        session, user_id, ExportFormat(body.format.value), body.filters or {}
+        session, user_id, ExportFormat(body.format.value), body.filters
     )
     return success(CreateExportResponse(export_id=exp.id).model_dump(mode="json"))
 

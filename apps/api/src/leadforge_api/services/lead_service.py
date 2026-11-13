@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
 from leadforge_database.models import Business, LeadScore
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from leadforge_api.core.errors import not_found
+from leadforge_api.core.tenancy import user_business_ids
 
 
 async def list_leads(
     session: AsyncSession,
+    user_id: UUID,
     *,
     score_min: int | None,
     score_max: int | None,
@@ -26,8 +28,9 @@ async def list_leads(
     page: int,
     limit: int,
 ) -> tuple[list[Business], int]:
-    # Build base query with explicit INNER JOIN to LeadScore
-    # This ensures lead_score filters are properly correlated with the business
+    # Explicit INNER JOIN to LeadScore keeps lead filters correlated; the
+    # tenant subquery keeps results scoped to this user's discovered leads.
+    scope = Business.id.in_(user_business_ids(user_id))
     query = select(Business).join(LeadScore, Business.id == LeadScore.business_id)
     count_query = (
         select(func.count())
@@ -35,7 +38,7 @@ async def list_leads(
         .join(LeadScore, Business.id == LeadScore.business_id)
     )
 
-    where = []
+    where: list[ColumnElement[bool]] = [scope]
     if score_min is not None:
         where.append(LeadScore.score >= score_min)
     if score_max is not None:
@@ -67,10 +70,13 @@ async def list_leads(
     return list(result.scalars()), int(total or 0)
 
 
-async def get_lead(session: AsyncSession, business_id: UUID) -> Business:
+async def get_lead(session: AsyncSession, user_id: UUID, business_id: UUID) -> Business:
     result = await session.execute(
         select(Business)
-        .where(Business.id == business_id)
+        .where(
+            Business.id == business_id,
+            Business.id.in_(user_business_ids(user_id)),
+        )
         .options(
             selectinload(Business.website),
             selectinload(Business.contacts),
@@ -82,9 +88,3 @@ async def get_lead(session: AsyncSession, business_id: UUID) -> Business:
     if business is None:
         raise not_found("Lead not found")
     return business
-
-
-def _coerce_filters(filters: dict[str, Any] | None) -> dict[str, Any]:
-    if not filters:
-        return {}
-    return {k: v for k, v in filters.items() if v is not None}

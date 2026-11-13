@@ -1,8 +1,17 @@
 """Scoring worker. Mirrors workers/scoring-worker/src/index.ts."""
 
-from leadforge_config import get_settings
+from uuid import UUID
+
 from leadforge_database import get_session_ctx
-from leadforge_database.models import Business, Contact, LeadScore, SocialProfile, Website
+from leadforge_database.models import (
+    Business,
+    Contact,
+    LeadScore,
+    SearchJob,
+    SearchJobBusiness,
+    SocialProfile,
+    Website,
+)
 from leadforge_shared.scoring import (
     ContactInput,
     ScoringInput,
@@ -12,7 +21,7 @@ from leadforge_shared.scoring import (
 )
 from leadforge_shared.types import ScoringJobData
 from leadforge_worker_core.core import WorkerWrapper
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 
 async def scoring_processor(data: ScoringJobData, logger):
@@ -97,13 +106,34 @@ async def scoring_processor(data: ScoringJobData, logger):
                 )
             )
 
+        await _refresh_search_job_progress(session, business_id)
         await session.commit()
         logger.info(
             "scoring_completed", businessId=str(business_id), score=result.score, grade=result.grade
         )
 
 
-worker = WorkerWrapper("scoring", scoring_processor)
+async def _refresh_search_job_progress(session, business_id) -> None:
+    """Recompute ``total_enriched`` for jobs linked to this business.
+
+    Idempotent: re-scoring a lead does not inflate the counter.
+    """
+    enriched_count = (
+        select(func.count())
+        .select_from(SearchJobBusiness)
+        .join(LeadScore, LeadScore.business_id == SearchJobBusiness.business_id)
+        .where(SearchJobBusiness.search_job_id == SearchJob.id)
+        .scalar_subquery()
+    )
+    linked_jobs = select(SearchJobBusiness.search_job_id).where(
+        SearchJobBusiness.business_id == business_id
+    )
+    await session.execute(
+        update(SearchJob).where(SearchJob.id.in_(linked_jobs)).values(total_enriched=enriched_count)
+    )
+
+
+worker: WorkerWrapper[ScoringJobData] = WorkerWrapper("scoring", scoring_processor)
 
 
 # ── Module-level arq function ──────────────────────────────────────────────
@@ -111,30 +141,15 @@ worker = WorkerWrapper("scoring", scoring_processor)
 
 async def scoring(ctx: dict, business_id: str) -> None:
     """Arq entry point."""
-    data = ScoringJobData(business_id=business_id)
+    data = ScoringJobData(business_id=UUID(business_id))
     await worker(ctx, data)
 
 
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
-    import time
+    from leadforge_worker_core.core import run_worker
 
-    from arq import Worker
-    from arq.connections import RedisSettings
-
-    settings = get_settings()
-    while True:
-        try:
-            worker_instance = Worker(
-                functions=[scoring],
-                queue_name="scoring",
-                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None),
-                max_jobs=settings.scraper_concurrency,
-            )
-            worker_instance.run()
-        except Exception as e:
-            print(f"[scoring] worker crashed: {e}, restarting in 3s...")
-            time.sleep(3)
+    run_worker("scoring", scoring)
 
 
 if __name__ == "__main__":

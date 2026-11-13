@@ -52,7 +52,7 @@ async def test_selectors(
         print(f"Failed to fetch sample URL: {sample_url}")
         return {}
 
-    from selectolax.parser import HTMLParser
+    from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
     tree = HTMLParser(html)
 

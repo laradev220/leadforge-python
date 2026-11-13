@@ -67,13 +67,10 @@ async def cache_invalidate(
 @router.post("/cache/clear")
 async def cache_clear(_admin: AdminUser) -> dict[str, Any]:
     """Clear the entire HTML cache (admin only)."""
-    get_cache()
     try:
-        import redis.asyncio as redis
-        from leadforge_config import get_settings
+        from leadforge_config import get_redis_client
 
-        settings = get_settings()
-        client = redis.Redis(host=settings.redis_host, port=settings.redis_port)
+        client = get_redis_client()
         keys = []
         cursor = 0
         while True:

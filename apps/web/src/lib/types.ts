@@ -17,7 +17,9 @@ export type ContactType =
   | "FACEBOOK"
   | "INSTAGRAM"
   | "LINKEDIN"
-  | "YOUTUBE";
+  | "YOUTUBE"
+  | "TIKTOK"
+  | "TWITTER";
 
 export type ContactSource =
   | "MAPS"
@@ -203,7 +205,9 @@ export type ExportStatus =
 export interface ExportFilters {
   search_job_id?: string;
   grade?: LeadGrade;
-  min_score?: number;
+  score_min?: number;
+  score_max?: number;
+  best_contact_method?: ContactType;
   city?: string;
   country?: string;
   website_status?: WebsiteStatus;

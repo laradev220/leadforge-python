@@ -7,9 +7,9 @@ search engine (Google) before marking it as NOT_FOUND.
 from __future__ import annotations
 
 from urllib.parse import quote_plus
+from uuid import UUID
 
 import httpx
-from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Website, WebsiteStatus
 from leadforge_scraper_core import analyze_website
@@ -94,7 +94,19 @@ async def _discover_website(business_name: str, location: str | None = None) -> 
             # Parse organic results — look for the first .g .kCrYT or similar
             import re
 
-            # Match Google result URLs (various formats)
+            def _acceptable(candidate: str) -> bool:
+                return (
+                    candidate.startswith("http")
+                    and "google.com" not in candidate
+                    and "youtube.com" not in candidate
+                    and "facebook.com" not in candidate
+                    and "instagram.com" not in candidate
+                    and "linkedin.com" not in candidate
+                    and not _is_listing_site(candidate)
+                )
+
+            # Match Google result URLs (various formats). Each pattern is
+            # evaluated in turn; earlier versions only inspected the last one.
             patterns = [
                 r'href="(https?://(?:www\.)?'
                 + re.escape(business_name.lower().split()[0])
@@ -103,19 +115,12 @@ async def _discover_website(business_name: str, location: str | None = None) -> 
                 r'<a[^>]*href="(/url\?q=https?://[^&"]+)[^"]*"',
             ]
             for pattern in patterns:
-                matches = re.findall(pattern, html, re.I)
-            for m in matches[:5]:
-                decoded = m.replace("/url?q=", "").split("&")[0] if "/url?q=" in m else m
-                if (
-                    decoded.startswith("http")
-                    and "google.com" not in decoded
-                    and "youtube.com" not in decoded
-                    and "facebook.com" not in decoded
-                    and "instagram.com" not in decoded
-                    and "linkedin.com" not in decoded
-                    and not _is_listing_site(decoded)
-                ):
-                    return decoded.split("?")[0]
+                for match in re.findall(pattern, html, re.I):
+                    decoded = (
+                        match.replace("/url?q=", "").split("&")[0] if "/url?q=" in match else match
+                    )
+                    if _acceptable(decoded):
+                        return decoded.split("?")[0]
 
             # Broader pattern: any link containing the business name
             name_slug = quote_plus(business_name.lower())
@@ -124,14 +129,9 @@ async def _discover_website(business_name: str, location: str | None = None) -> 
                 html,
                 re.I,
             )
-            for m in broad[:3]:
-                if (
-                    m.startswith("http")
-                    and "google.com" not in m
-                    and "youtube.com" not in m
-                    and not _is_listing_site(m)
-                ):
-                    return m.split("?")[0]
+            for match in broad[:3]:
+                if _acceptable(match):
+                    return match.split("?")[0]
 
     except Exception as exc:
         import structlog
@@ -193,7 +193,7 @@ async def website_processor(data: WebsiteJobData, logger):
                 logger.info(
                     "website_not_found",
                     businessId=str(business_id),
-                    name=business.name,
+                    name=business_name,
                 )
                 business.website_status = WebsiteStatus.NOT_FOUND
                 await session.commit()
@@ -236,7 +236,7 @@ async def website_processor(data: WebsiteJobData, logger):
         )
 
 
-worker = WorkerWrapper("website", website_processor)
+worker: WorkerWrapper[WebsiteJobData] = WorkerWrapper("website", website_processor)
 
 
 # ── Module-level arq function ──────────────────────────────────────────────
@@ -244,30 +244,15 @@ worker = WorkerWrapper("website", website_processor)
 
 async def website(ctx: dict, business_id: str) -> None:
     """Arq entry point."""
-    data = WebsiteJobData(business_id=business_id)
+    data = WebsiteJobData(business_id=UUID(business_id))
     await worker(ctx, data)
 
 
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
-    import time
+    from leadforge_worker_core.core import run_worker
 
-    from arq import Worker
-    from arq.connections import RedisSettings
-
-    settings = get_settings()
-    while True:
-        try:
-            worker_instance = Worker(
-                functions=[website],
-                queue_name="website",
-                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None),
-                max_jobs=settings.scraper_concurrency,
-            )
-            worker_instance.run()
-        except Exception as e:
-            print(f"[website] worker crashed: {e}, restarting in 3s...")
-            time.sleep(3)
+    run_worker("website", website)
 
 
 if __name__ == "__main__":

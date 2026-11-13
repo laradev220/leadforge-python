@@ -12,21 +12,8 @@ setup: install-deps install-playwright db-create db-migrate
 	@echo "✓ Setup complete. Run 'make run-api' to start."
 
 install-deps:
-	uv sync
-	uv pip install -e \
-		packages/config \
-		packages/shared \
-		packages/database \
-		packages/worker_core \
-		packages/scraper_core \
-		apps/api \
-		workers/discovery_worker \
-		workers/website_worker \
-		workers/contact_worker \
-		workers/social_worker \
-		workers/scoring_worker \
-		workers/export_worker
-	@echo "✓ Dependencies installed"
+	uv sync --all-packages
+	@echo "✓ Dependencies installed (lockfile, incl. workspace members)"
 
 install-playwright:
 	/usr/bin/playwright install chromium

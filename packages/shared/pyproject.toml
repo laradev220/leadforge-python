@@ -5,6 +5,7 @@ description = "Shared types, constants, utils, and scoring engine"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic>=2.8",
+    "phonenumbers>=8.13",
 ]
 
 [tool.hatch.build.targets.wheel]

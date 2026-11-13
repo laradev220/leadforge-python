@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     jwt_expires_hours: int = Field(default=24, alias="JWT_EXPIRES_HOURS")
 
     scraper_concurrency: int = Field(default=3, alias="SCRAPER_CONCURRENCY")
+    worker_concurrency: int = Field(default=3, alias="WORKER_CONCURRENCY")
     scraper_request_delay_ms: int = Field(default=2000, alias="SCRAPER_REQUEST_DELAY_MS")
     scraper_request_timeout_ms: int = Field(default=10000, alias="SCRAPER_REQUEST_TIMEOUT_MS")
     scraper_max_results_per_search: int = Field(default=8, alias="SCRAPER_MAX_RESULTS_PER_SEARCH")

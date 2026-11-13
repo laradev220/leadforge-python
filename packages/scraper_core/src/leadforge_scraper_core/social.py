@@ -13,9 +13,10 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 import structlog
+from leadforge_shared.dates import parse_iso_datetime, parse_relative_phrase
 from leadforge_shared.types import SocialPlatform
 from leadforge_shared.utils import is_valid_email, normalize_phone
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.social_platforms import (
     SOCIAL_DOMAINS,
@@ -471,9 +472,52 @@ async def scrape_social_profile_rich(
 
         # Rich profile data
         rich = extract_rich_profile_data(html, platform)
+        # The platform extractors may not set last_activity_at — fall back to a
+        # generic date sniff so the scoring engine has something to work with.
+        if not rich.last_activity_at:
+            rich.last_activity_at = _sniff_last_activity(html)
         result.update(rich.to_dict())
 
     except Exception as exc:
         logger.debug("scrape_rich.failed", url=profile_url, error=str(exc))
 
     return result
+
+
+# ── Last-activity date sniffing ──────────────────────────────────────────────
+
+
+_META_DATE_KEYS = (
+    "og:updated_time",
+    "article:modified_time",
+    "article:published_time",
+    "og:article:published_time",
+    "og:article:modified_time",
+    "lastmod",
+    "pubdate",
+    "date",
+    "dc.date",
+    "dc.date.modified",
+    "dc.date.created",
+)
+
+
+def _sniff_last_activity(html: str) -> str | None:
+    """Best-effort extraction of the profile's last-activity date string.
+
+    Returns an ISO-8601 string suitable for storage, or ``None``.
+    """
+    if not html:
+        return None
+
+    # 1. Check standard meta tags first.
+    for key in _META_DATE_KEYS:
+        val = _extract_meta_content(html, key)
+        if val and parse_iso_datetime(val) is not None:
+            return val
+
+    # 2. Fall back to relative phrases in body text.
+    tree = HTMLParser(html)
+    text = tree.body.text() if tree.body else ""
+    parsed = parse_relative_phrase(text)
+    return parsed.isoformat() if parsed else None

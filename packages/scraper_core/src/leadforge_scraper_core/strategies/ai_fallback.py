@@ -127,13 +127,9 @@ class AIFallbackStrategy(ExtractionStrategy):
     async def _check_budget(self, logger: Any) -> bool:
         """Check Redis budget counter, return False if exhausted."""
         try:
-            import redis.asyncio as redis
+            from leadforge_config import get_redis_client
 
-            client = redis.Redis(
-                host=os.environ.get("REDIS_HOST", "localhost"),
-                port=int(os.environ.get("REDIS_PORT", "6379")),
-                decode_responses=True,
-            )
+            client = get_redis_client(decode_responses=True)
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:

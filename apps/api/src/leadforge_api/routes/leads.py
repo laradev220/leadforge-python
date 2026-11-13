@@ -32,6 +32,7 @@ async def list_leads(
     pagination = get_pagination({"page": str(page), "limit": str(limit)})
     businesses, total = await lead_service.list_leads(
         session,
+        user_id,
         score_min=score_min,
         score_max=score_max,
         grade=grade,
@@ -63,7 +64,7 @@ async def list_leads(
 
 @router.get("/{business_id}", response_model=None)
 async def get_lead(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
-    business = await lead_service.get_lead(session, UUID(business_id))
+    business = await lead_service.get_lead(session, user_id, UUID(business_id))
     return success(
         LeadResponse.model_validate(
             {

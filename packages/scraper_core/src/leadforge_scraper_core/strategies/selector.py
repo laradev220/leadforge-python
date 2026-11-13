@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.strategies.base import (
     ExtractionStrategy,

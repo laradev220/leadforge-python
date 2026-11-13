@@ -38,6 +38,7 @@ async def list_businesses(
     pagination = get_pagination({"page": str(page), "limit": str(limit)})
     businesses, total = await business_service.list_businesses(
         session,
+        user_id,
         name=name,
         city=city,
         country=country,
@@ -58,13 +59,13 @@ async def list_businesses(
 
 @router.get("/{business_id}", response_model=None)
 async def get_business(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
-    business = await business_service.get_by_id(session, UUID(business_id))
+    business = await business_service.get_by_id(session, user_id, UUID(business_id))
     return success(BusinessResponse.model_validate(business).model_dump(mode="json"))
 
 
 @router.post("/{business_id}/re-enrich", response_model=None)
 async def re_enrich(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
-    await business_service.re_enrich(session, UUID(business_id))
+    await business_service.re_enrich(session, user_id, UUID(business_id))
     return success({"reEnriched": True})
 
 
@@ -72,7 +73,7 @@ async def re_enrich(business_id: str, user_id: CurrentUserId, session: DBSession
 async def get_business_website(
     business_id: str, user_id: CurrentUserId, session: DBSession
 ) -> dict:
-    await business_service.get_by_id(session, UUID(business_id))
+    await business_service.get_by_id(session, user_id, UUID(business_id))
     website = await business_service.get_website(session, UUID(business_id))
     if website is None:
         return success(None)
@@ -83,7 +84,7 @@ async def get_business_website(
 async def list_business_contacts(
     business_id: str, user_id: CurrentUserId, session: DBSession
 ) -> dict:
-    contacts = await business_service.list_contacts(session, UUID(business_id))
+    contacts = await business_service.list_contacts(session, user_id, UUID(business_id))
     return success([ContactResponse.model_validate(c).model_dump(mode="json") for c in contacts])
 
 
@@ -91,7 +92,9 @@ async def list_business_contacts(
 async def add_business_contact(
     business_id: str, body: AddContactRequest, user_id: CurrentUserId, session: DBSession
 ) -> dict:
-    contact = await business_service.add_contact(session, UUID(business_id), body.type, body.value)
+    contact = await business_service.add_contact(
+        session, user_id, UUID(business_id), body.type, body.value
+    )
     return success(ContactResponse.model_validate(contact).model_dump(mode="json"))
 
 
@@ -99,7 +102,7 @@ async def add_business_contact(
 async def list_business_social_profiles(
     business_id: str, user_id: CurrentUserId, session: DBSession
 ) -> dict:
-    profiles = await business_service.list_social_profiles(session, UUID(business_id))
+    profiles = await business_service.list_social_profiles(session, user_id, UUID(business_id))
     return success(
         [SocialProfileResponse.model_validate(p).model_dump(mode="json") for p in profiles]
     )

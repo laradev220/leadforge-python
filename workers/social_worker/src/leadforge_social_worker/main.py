@@ -11,7 +11,10 @@ import asyncio
 import contextlib
 import re
 import secrets
+from datetime import datetime
+from typing import Any
 from urllib.parse import quote_plus, urlparse
+from uuid import UUID
 
 import httpx
 import structlog
@@ -20,9 +23,10 @@ from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, SocialProfile
 from leadforge_scraper_core import extract_social_profiles
 from leadforge_scraper_core.social_platforms import get_social_platform_search_terms
+from leadforge_shared.dates import parse_last_activity
 from leadforge_shared.types import SocialJobData
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 logger = structlog.get_logger("worker.social")
 
@@ -173,7 +177,7 @@ async def social_processor(data: SocialJobData, log):
         "discovering_social", businessId=str(business_id), url=website_url, cdp_enabled=use_cdp
     )
 
-    profiles = []
+    profiles: list[dict[str, Any]] = []
 
     # ── Phase 1: Discover social profiles ─────────────────────────────────
     if website_url:
@@ -236,19 +240,27 @@ async def social_processor(data: SocialJobData, log):
         for p in profiles:
             normalized_url = _normalize_url(p["profile_url"])
             try:
-                # Check by normalized URL (strip trailing slash)
+                # Compare in SQL (indexed by platform) instead of loading every
+                # row for the platform into Python.
                 res = await session.execute(
-                    select(SocialProfile).where(
+                    select(SocialProfile)
+                    .where(
                         SocialProfile.platform == p["platform"],
+                        func.rtrim(func.lower(SocialProfile.profile_url), "/") == normalized_url,
                     )
+                    .limit(1)
                 )
-                existing = None
-                for sp in res.scalars():
-                    if _normalize_url(sp.profile_url) == normalized_url:
-                        existing = sp
-                        break
+                existing = res.scalar_one_or_none()
                 if existing:
-                    existing.business_id = business_id
+                    if existing.business_id != business_id:
+                        # Never steal a profile already attached to another
+                        # business; the URL is globally unique.
+                        log.debug(
+                            "profile_owned_by_other_business",
+                            profile=existing.profile_url,
+                            businessId=str(existing.business_id),
+                        )
+                        continue
                     saved_profiles.append(existing)
                 else:
                     sp = SocialProfile(
@@ -346,6 +358,14 @@ async def social_processor(data: SocialJobData, log):
                         if val and not getattr(db_sp, field_name):
                             setattr(db_sp, field_name, val)
                             updated = True
+                    # last_activity_at is timestamp-typed on the column but string in
+                    # RichProfileData.to_dict(); parse it before persisting.
+                    raw_activity = contacts.get("last_activity_at")
+                    if raw_activity and not db_sp.last_activity_at:
+                        parsed = _parse_last_activity(raw_activity)
+                        if parsed is not None:
+                            db_sp.last_activity_at = parsed
+                            updated = True
                     if updated:
                         log.info(
                             "profile_updated", platform=db_sp.platform, fields=list(contacts.keys())
@@ -393,37 +413,34 @@ async def _update_profile(sp: SocialProfile, contacts: dict, session=None) -> No
     sp._contacts = contacts  # type: ignore[attr-defined]
 
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _parse_last_activity(value: str | None) -> datetime | None:
+    """Parse a last-activity string into a tz-aware datetime.
+
+    Delegates to the shared parser so scraper-side and worker-side parsing
+    cannot drift. Returns None on failure.
+    """
+    return parse_last_activity(value)
+
+
 # ── Arq entry point ───────────────────────────────────────────────────────────
 
-worker = WorkerWrapper("social", social_processor)
+worker: WorkerWrapper[SocialJobData] = WorkerWrapper("social", social_processor)
 
 
 async def social(ctx: dict, business_id: str, website_url: str = "") -> None:
     """Arq entry point."""
-    data = SocialJobData(business_id=business_id, website_url=website_url)
+    data = SocialJobData(business_id=UUID(business_id), website_url=website_url)
     await worker(ctx, data)
 
 
 def main():
     """Entrypoint — arq 0.28's Worker.run() is synchronous."""
-    import time
+    from leadforge_worker_core.core import run_worker
 
-    from arq import Worker
-    from arq.connections import RedisSettings
-
-    settings = get_settings()
-    while True:
-        try:
-            worker_instance = Worker(
-                functions=[social],
-                queue_name="social",
-                redis_settings=RedisSettings(host=settings.redis_host, port=settings.redis_port, password=settings.redis_password or None),
-                max_jobs=settings.scraper_concurrency,
-            )
-            worker_instance.run()
-        except Exception as e:
-            print(f"[social] worker crashed: {e}, restarting in 3s...")
-            time.sleep(3)
+    run_worker("social", social)
 
 
 if __name__ == "__main__":

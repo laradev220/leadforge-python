@@ -10,6 +10,7 @@ import type {
   ExportRecord,
   LeadGrade,
   WebsiteStatus,
+  ContactType,
 } from "@/lib/types";
 import {
   EXPORT_FORMATS,
@@ -17,6 +18,7 @@ import {
   EXPORT_FORMAT_LABELS,
   LEAD_GRADES,
   WEBSITE_STATUS_LABELS,
+  CONTACT_TYPE_LABELS,
 } from "@/lib/format";
 
 export function CreateExportModal({
@@ -31,6 +33,8 @@ export function CreateExportModal({
   const [format, setFormat] = useState<ExportFormat>("CSV");
   const [grade, setGrade] = useState<LeadGrade | "">("");
   const [minScore, setMinScore] = useState("");
+  const [maxScore, setMaxScore] = useState("");
+  const [bestContactMethod, setBestContactMethod] = useState<ContactType | "">("");
   const [websiteStatus, setWebsiteStatus] = useState<WebsiteStatus | "">("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -62,6 +66,8 @@ export function CreateExportModal({
     setFormat("CSV");
     setGrade("");
     setMinScore("");
+    setMaxScore("");
+    setBestContactMethod("");
     setWebsiteStatus("");
     setCity("");
     setCountry("");
@@ -73,8 +79,19 @@ export function CreateExportModal({
     try {
       const filters: ExportFilters = {};
       if (grade) filters.grade = grade as LeadGrade;
-      const parsedScore = parseFloat(minScore);
-      if (Number.isFinite(parsedScore)) filters.min_score = parsedScore;
+      const parsedMin = parseFloat(minScore);
+      const parsedMax = parseFloat(maxScore);
+      if (
+        Number.isFinite(parsedMin) &&
+        Number.isFinite(parsedMax) &&
+        parsedMin > parsedMax
+      ) {
+        toast.error("Min score cannot be greater than max score");
+        return;
+      }
+      if (Number.isFinite(parsedMin)) filters.score_min = parsedMin;
+      if (Number.isFinite(parsedMax)) filters.score_max = parsedMax;
+      if (bestContactMethod) filters.best_contact_method = bestContactMethod as ContactType;
       if (websiteStatus) filters.website_status = websiteStatus as WebsiteStatus;
       if (city.trim()) filters.city = city.trim();
       if (country.trim()) filters.country = country.trim().toUpperCase();
@@ -158,11 +175,31 @@ export function CreateExportModal({
                   ...LEAD_GRADES.map((g) => ({ value: g, label: g })),
                 ]}
               />
+              <SelectField
+                label="Best channel"
+                value={bestContactMethod}
+                onChange={(v) => setBestContactMethod(v as ContactType | "")}
+                options={[
+                  { value: "", label: "Any" },
+                  ...Object.entries(CONTACT_TYPE_LABELS).map(([k, v]) => ({
+                    value: k,
+                    label: v,
+                  })),
+                ]}
+              />
               <NumberField
                 label="Min score"
                 value={minScore}
                 onChange={setMinScore}
                 placeholder="0"
+                min={0}
+                max={100}
+              />
+              <NumberField
+                label="Max score"
+                value={maxScore}
+                onChange={setMaxScore}
+                placeholder="100"
                 min={0}
                 max={100}
               />

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from leadforge_api.core.deps import CurrentUser, CurrentUserId, DBSession
+from leadforge_api.core.ratelimit import enforce_rate_limit
 from leadforge_api.core.response import success
 from leadforge_api.core.security import create_access_token
 from leadforge_api.schemas import (
@@ -22,14 +23,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=None)
-async def register(body: RegisterRequest, session: DBSession) -> dict:
+async def register(body: RegisterRequest, request: Request, session: DBSession) -> dict:
+    await enforce_rate_limit(request, bucket="register", limit=5, window_seconds=3600)
     user = await auth_service.register(session, body.email, body.password, body.full_name)
     token = create_access_token(user.id, user.email)
     return success(AuthResponse(user=UserResponse.model_validate(user), token=token).model_dump())
 
 
 @router.post("/login", response_model=None)
-async def login(body: LoginRequest, session: DBSession) -> dict:
+async def login(body: LoginRequest, request: Request, session: DBSession) -> dict:
+    await enforce_rate_limit(request, bucket="login", limit=10, window_seconds=300)
     user = await auth_service.login(session, body.email, body.password)
     token = create_access_token(user.id, user.email)
     return success(TokenResponse(token=token, user=UserResponse.model_validate(user)).model_dump())
@@ -53,8 +56,9 @@ async def update_me(body: UpdateProfileRequest, user_id: CurrentUserId, session:
 
 @router.put("/password", response_model=None)
 async def change_password(
-    body: ChangePasswordRequest, user_id: CurrentUserId, session: DBSession
+    body: ChangePasswordRequest, request: Request, user_id: CurrentUserId, session: DBSession
 ) -> dict:
+    await enforce_rate_limit(request, bucket="password", limit=10, window_seconds=300)
     await auth_service.change_password(
         session,
         user_id,

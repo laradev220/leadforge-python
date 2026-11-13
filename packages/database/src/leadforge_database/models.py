@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
-import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from leadforge_shared.types import (
+    ContactSource,
+    ContactType,
+    EnrichmentStatus,
+    ExportFormat,
+    SearchJobStatus,
+    SocialPlatform,
+    UserRole,
+    WebsiteStatus,
+)
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -32,69 +41,6 @@ if TYPE_CHECKING:
 
 class Base(DeclarativeBase):
     pass
-
-
-class SearchJobStatus(enum.StrEnum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
-
-
-class WebsiteStatus(enum.StrEnum):
-    UNKNOWN = "UNKNOWN"
-    FOUND = "FOUND"
-    NOT_FOUND = "NOT_FOUND"
-    INVALID = "INVALID"
-
-
-class ContactType(enum.StrEnum):
-    EMAIL = "EMAIL"
-    PHONE = "PHONE"
-    WHATSAPP = "WHATSAPP"
-    CONTACT_FORM = "CONTACT_FORM"
-    FACEBOOK = "FACEBOOK"
-    INSTAGRAM = "INSTAGRAM"
-    LINKEDIN = "LINKEDIN"
-    YOUTUBE = "YOUTUBE"
-    TIKTOK = "TIKTOK"
-    TWITTER = "TWITTER"
-
-
-class ContactSource(enum.StrEnum):
-    MAPS = "MAPS"
-    WEBSITE = "WEBSITE"
-    SOCIAL = "SOCIAL"
-    DIRECTORY = "DIRECTORY"
-    MANUAL = "MANUAL"
-
-
-class SocialPlatform(enum.StrEnum):
-    FACEBOOK = "FACEBOOK"
-    INSTAGRAM = "INSTAGRAM"
-    LINKEDIN = "LINKEDIN"
-    YOUTUBE = "YOUTUBE"
-    TIKTOK = "TIKTOK"
-    TWITTER = "TWITTER"
-
-
-class EnrichmentStatus(enum.StrEnum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class ExportFormat(enum.StrEnum):
-    CSV = "CSV"
-    XLSX = "XLSX"
-    JSON = "JSON"
-
-
-class UserRole(enum.StrEnum):
-    ADMIN = "ADMIN"
-    USER = "USER"
 
 
 _UUID = PG_UUID(as_uuid=True)

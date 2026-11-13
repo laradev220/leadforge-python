@@ -7,6 +7,7 @@ from uuid import UUID
 
 from leadforge_config import get_settings
 from leadforge_database.models import Export, ExportFormat
+from leadforge_shared.types import ExportFilters, ExportStatus
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,13 +16,22 @@ from leadforge_api.core.queue import enqueue_export
 
 
 async def create_export(
-    session: AsyncSession, user_id: UUID, fmt: ExportFormat, filters: dict
+    session: AsyncSession,
+    user_id: UUID,
+    fmt: ExportFormat,
+    filters: ExportFilters | None,
 ) -> Export:
-    exp = Export(user_id=user_id, format=fmt, status="PENDING", filters=filters or None)
+    payload = filters.model_dump(mode="json", exclude_none=True) if filters is not None else None
+    exp = Export(
+        user_id=user_id,
+        format=fmt,
+        status=ExportStatus.PENDING.value,
+        filters=payload or None,
+    )
     session.add(exp)
     await session.commit()
     await session.refresh(exp)
-    await enqueue_export(exp.id, filters=filters)
+    await enqueue_export(exp.id, filters=payload or None)
     return exp
 
 
