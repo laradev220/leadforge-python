@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     worker_concurrency: int = Field(default=3, alias="WORKER_CONCURRENCY")
     scraper_request_delay_ms: int = Field(default=2000, alias="SCRAPER_REQUEST_DELAY_MS")
     scraper_request_timeout_ms: int = Field(default=10000, alias="SCRAPER_REQUEST_TIMEOUT_MS")
-    scraper_max_results_per_search: int = Field(default=8, alias="SCRAPER_MAX_RESULTS_PER_SEARCH")
+    scraper_max_results_per_search: int = Field(default=20, alias="SCRAPER_MAX_RESULTS_PER_SEARCH")
     playwright_headless: bool = Field(default=True, alias="PLAYWRIGHT_HEADLESS")
     playwright_proxy_url: str = Field(default="", alias="PLAYWRIGHT_PROXY_URL")
 

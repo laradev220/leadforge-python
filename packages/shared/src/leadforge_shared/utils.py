@@ -12,6 +12,54 @@ _PHONE_DIGITS_RE = re.compile(r"\D")
 _PHONE_SEPARATOR_RE = re.compile(r"[\s\-().]")
 _EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
+# ISO-3166-1 alpha-2 by country-code TLD, for parsing national phone formats.
+_TLD_REGION: dict[str, str] = {
+    "pk": "PK",
+    "uk": "GB",
+    "us": "US",
+    "ca": "CA",
+    "au": "AU",
+    "nz": "NZ",
+    "ie": "IE",
+    "de": "DE",
+    "fr": "FR",
+    "es": "ES",
+    "it": "IT",
+    "nl": "NL",
+    "in": "IN",
+    "ae": "AE",
+    "sg": "SG",
+    "za": "ZA",
+    "br": "BR",
+}
+
+
+def region_for_url(url: str) -> str | None:
+    """Best-effort ISO country code from a site's ccTLD (``.pk`` -> ``PK``)."""
+    try:
+        host = (urlparse(url).hostname or "").lower()
+    except (TypeError, ValueError):
+        return None
+    if not host:
+        return None
+    tld = host.rsplit(".", 1)[-1]
+    return _TLD_REGION.get(tld)
+
+
+def is_valid_phone(value: str, region: str | None = None) -> bool:
+    """Validate via phonenumbers (rejects CSS/JS digit runs).
+
+    With a known region (ccTLD) only strictly valid numbers pass. Without one
+    (``.com``), fall back to US parsing and accept possible numbers for local
+    formats like ``(555) 123-4567``.
+    """
+    parsed_region = region or "US"
+    try:
+        parsed = phonenumbers.parse(value, parsed_region)
+    except NumberParseException:
+        return False
+    return phonenumbers.is_valid_number(parsed)
+
 
 def looks_like_phone(value: str) -> bool:
     """Heuristic filter for page text that only resembles a phone number.
@@ -23,7 +71,13 @@ def looks_like_phone(value: str) -> bool:
     digits = _PHONE_DIGITS_RE.sub("", stripped)
     if not 7 <= len(digits) <= 15:
         return False
-    return stripped.startswith("+") or bool(_PHONE_SEPARATOR_RE.search(stripped))
+    if stripped.startswith("+"):
+        return True
+    # National formats need separators and at least one 3+ digit group;
+    # space-separated CSS/JS digit runs have neither.
+    if not _PHONE_SEPARATOR_RE.search(stripped):
+        return False
+    return bool(re.search(r"\d{3,}", stripped))
 
 
 def normalize_phone(phone: str, region: str | None = None) -> str:

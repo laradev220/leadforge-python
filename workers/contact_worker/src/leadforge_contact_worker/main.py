@@ -90,7 +90,10 @@ async def contact_processor(data: ContactJobData, logger):
     except Exception as e:
         logger.error("crawl_failed", businessId=str(business_id), error=str(e))
 
-    contacts = await extract_contacts(all_html, website_url)
+    async with get_session_ctx() as session:
+        country = await session.scalar(select(Business.country).where(Business.id == business_id))
+    region = country.upper() if country and len(country) == 2 else None
+    contacts = await extract_contacts(all_html, website_url, region=region)
     logger.info("contacts_extracted", businessId=str(business_id), count=len(contacts))
 
     async with get_session_ctx() as session:

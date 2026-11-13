@@ -10,7 +10,13 @@ from dataclasses import dataclass
 from urllib.parse import urljoin
 
 import structlog
-from leadforge_shared.utils import is_valid_email, looks_like_phone, normalize_phone
+from leadforge_shared.utils import (
+    is_valid_email,
+    is_valid_phone,
+    looks_like_phone,
+    normalize_phone,
+    region_for_url,
+)
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from leadforge_scraper_core.base import fetch_html
@@ -31,10 +37,22 @@ PHONE_RE = re.compile(r"[\+]?[\d\s\-\(\)]{7,20}")
 WHATSAPP_RE = re.compile(r"(?:wa\.me|whatsapp\.com)/(?:send\?phone=)?(\d+)", re.I)
 
 HIGH_CONF_EMAILS = ["info", "hello", "contact", "support", "admin", "sales"]
+_PLACEHOLDER_EMAIL_DOMAINS = frozenset(
+    {"example.com", "example.org", "example.net", "domain.com", "email.com"}
+)
+_TEL_LINK_RE = re.compile(r"""href=["']tel:([^"']+)["']""", re.IGNORECASE)
+_IMAGE_EXT_RE = re.compile(r"\.(png|jpe?g|gif|webp|svg|avif|ico|bmp|css|js)$", re.IGNORECASE)
 
 
-async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
-    """Extract contact information from HTML page content."""
+async def extract_contacts(
+    html: str, base_url: str, region: str | None = None
+) -> list[ExtractedContact]:
+    """Extract contact information from HTML page content.
+
+    ``region`` is an ISO-3166-1 alpha-2 code used to parse national phone
+    formats; it defaults to the ccTLD of ``base_url`` when omitted.
+    """
+    resolved_region = region or region_for_url(base_url)
     contacts: list[ExtractedContact] = []
     seen: set[str] = set()
     tree = HTMLParser(html)
@@ -44,11 +62,15 @@ async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
     for email in emails:
         if not is_valid_email(email) or email in seen:
             continue
+        if _IMAGE_EXT_RE.search(email):
+            continue
         seen.add(email)
-        local = email.split("@")[0].lower()
+        local, domain = email.split("@", 1)
+        if domain.lower() in _PLACEHOLDER_EMAIL_DOMAINS:
+            continue
+        local = local.lower()
         is_high = local in HIGH_CONF_EMAILS
-        domain = email.split("@")[1]
-        is_biz = domain not in ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
+        is_biz = domain.lower() not in ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
         score = 90 if is_high and is_biz else (60 if is_biz else 30)
         contacts.append(ExtractedContact("EMAIL", email, score))
 
@@ -57,20 +79,26 @@ async def extract_contacts(html: str, base_url: str) -> list[ExtractedContact]:
     for tag in tree.css("script, style, noscript"):
         tag.decompose()
     text = tree.body.text() if tree.body else ""
-    for candidate in PHONE_RE.findall(text):
+    candidates = PHONE_RE.findall(text) + _TEL_LINK_RE.findall(html)
+    for candidate in candidates:
         cleaned = candidate.strip()
         if cleaned in seen or not looks_like_phone(cleaned):
             continue
-        normalized = normalize_phone(cleaned)
+        if not is_valid_phone(cleaned, resolved_region):
+            continue
+        normalized = normalize_phone(cleaned, resolved_region)
         if normalized in seen:
             continue
         seen.update((cleaned, normalized))
         contacts.append(ExtractedContact("PHONE", normalized, 70))
 
-    # Extract WhatsApp links
-    whatsapp = WHATSAPP_RE.findall(html)
-    for w in whatsapp:
-        contacts.append(ExtractedContact("WHATSAPP", f"https://wa.me/{w}", 80))
+    # Extract WhatsApp links (duplicate links are common in headers/footers)
+    for number in WHATSAPP_RE.findall(html):
+        value = f"https://wa.me/{number}"
+        if value in seen:
+            continue
+        seen.add(value)
+        contacts.append(ExtractedContact("WHATSAPP", value, 80))
 
     # Detect contact forms
     form = tree.css_first("form")

@@ -121,10 +121,10 @@ class TestGetPriorityUrls:
 SAMPLE_HTML = """
 <html>
   <body>
-    <p>Email: info@example.com</p>
+    <p>Email: info@acme.com</p>
     <p>Email: support@business.co.uk</p>
-    <p>Phone: (555) 123-4567</p>
-    <p>Phone: +1 555-987-6543</p>
+    <p>Phone: (415) 555-0100</p>
+    <p>Phone: +1 415 555 0199</p>
     <a href="https://wa.me/1234567890">WhatsApp</a>
     <a href="https://web.whatsapp.com/send?phone=9876543210">Chat</a>
     <form action="/contact">
@@ -148,7 +148,7 @@ class TestExtractContacts:
     @pytest.mark.asyncio
     async def test_high_confidence_for_info(self) -> None:
         contacts = await extract_contacts(SAMPLE_HTML, "https://example.com")
-        info_email = next((c for c in contacts if c.value == "info@example.com"), None)
+        info_email = next((c for c in contacts if c.value == "info@acme.com"), None)
         assert info_email is not None
         assert info_email.confidence_score >= 80
 
@@ -188,10 +188,10 @@ class TestExtractContacts:
     async def test_deduplicates(self) -> None:
         html = """
         <html><body>
-          <p>Email: info@example.com</p>
+          <p>Email: info@acme.com</p>
           <p>Also reachable at: info@example.com</p>
-          <p>Phone: (555) 123-4567</p>
-          <p>Phone: (555) 123-4567</p>
+          <p>Phone: (415) 555-0100</p>
+          <p>Phone: (415) 555-0100</p>
         </body></html>
         """
         contacts = await extract_contacts(html, "https://example.com")

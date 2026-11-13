@@ -18,6 +18,8 @@ import structlog
 from leadforge_shared.utils import extract_domain, normalize_url
 from playwright.async_api import async_playwright
 
+from leadforge_scraper_core.base import ACCEPT_ENCODING
+
 logger = structlog.get_logger("scraper.website")
 
 
@@ -51,7 +53,7 @@ async def _httpx_probe(url: str) -> WebsiteAnalysis:
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "Accept-Language": "en-US,en;q=0.5",
-                    "Accept-Encoding": "gzip, deflate, br",
+                    "Accept-Encoding": ACCEPT_ENCODING,
                 },
             )
             load_time = int((time.time() - start) * 1000)

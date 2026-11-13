@@ -102,7 +102,7 @@ async def search_osm(keyword: str, location: str) -> list[MapsBusiness]:
     if not keyword or not location:
         return []
 
-    async with httpx.AsyncClient(timeout=40.0, headers=_HEADERS, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=20.0, headers=_HEADERS, follow_redirects=True) as client:
         try:
             geo_res = await client.get(
                 _NOMINATIM,
