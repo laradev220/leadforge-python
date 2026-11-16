@@ -22,7 +22,10 @@
   - proof 2026-11-16: Signature Smile re-enrich -> 17 provenance rows (website,
     contact, social, verification); GET /leads/{id} includes provenance and
     contacts[].verification; repeat upsert keeps first_seen, refreshes last_checked
-- [ ] Slice 5 — verified/mobile lead filters + list UI badges
+- [x] Slice 5 — verified/mobile lead filters + list UI badges
+  - proof 2026-11-16: /leads?include_stats=true -> total 43, verified 0,
+    domain-checked 1, mobile 5; has_mobile filter returns 5 leads with MOBILE;
+    web typecheck clean (verification + phone badges, toggles, counts)
 - [ ] Slice 6 — verified-only suppression-safe exports + export UI coverage
 - [ ] Slice 7 — detail proof panel, admin queue, env/Makefile/README polish
 

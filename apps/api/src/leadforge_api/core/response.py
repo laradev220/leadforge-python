@@ -41,14 +41,19 @@ def success(data: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     return out
 
 
-def paginated(data: list[Any], total: int, page: int, limit: int) -> dict[str, Any]:
-    return {
-        "success": True,
-        "data": data,
-        "meta": {
-            "page": page,
-            "limit": limit,
-            "total": total,
-            "total_pages": (total + limit - 1) // limit,
-        },
+def paginated(
+    data: list[Any],
+    total: int,
+    page: int,
+    limit: int,
+    extra_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    meta: dict[str, Any] = {
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": (total + limit - 1) // limit,
     }
+    if extra_meta:
+        meta.update(extra_meta)
+    return {"success": True, "data": data, "meta": meta}

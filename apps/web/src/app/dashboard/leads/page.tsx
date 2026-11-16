@@ -20,6 +20,7 @@ import {
   type SortValue,
 } from "@/lib/format";
 import { ScorePill } from "@/components/score-breakdown";
+import { PhoneTypeBadge, VerificationBadge } from "@/components/verification-badge";
 
 const LIMIT = 50;
 
@@ -31,6 +32,8 @@ type Filters = {
   best_contact_method: string;
   city: string;
   country: string;
+  verified_email: string;
+  has_mobile: string;
   sort: SortValue;
 };
 
@@ -42,6 +45,8 @@ const DEFAULTS: Filters = {
   best_contact_method: "",
   city: "",
   country: "",
+  verified_email: "",
+  has_mobile: "",
   sort: "score_max:desc",
 };
 
@@ -54,6 +59,12 @@ export default function LeadsPage() {
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<{
+    total_count?: number;
+    verified_email_count?: number;
+    checked_email_count?: number;
+    mobile_count?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -71,6 +82,9 @@ export default function LeadsPage() {
       best_contact_method: values.best_contact_method || undefined,
       city: values.city || undefined,
       country: values.country || undefined,
+      verified_email: values.verified_email === "1" ? true : undefined,
+      has_mobile: values.has_mobile === "1" ? true : undefined,
+      include_stats: true,
     }),
     [page, values],
   );
@@ -85,6 +99,12 @@ export default function LeadsPage() {
         if (cancelled) return;
         setLeads(res.data);
         setTotal(res.meta.total);
+        setStats({
+          total_count: res.meta.total_count,
+          verified_email_count: res.meta.verified_email_count,
+          checked_email_count: res.meta.checked_email_count,
+          mobile_count: res.meta.mobile_count,
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -254,6 +274,48 @@ export default function LeadsPage() {
         />
       </div>
 
+      {/* Quality filters */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-6">
+        <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="accent-ember"
+            checked={values.verified_email === "1"}
+            onChange={(e) =>
+              setValues({ verified_email: e.target.checked ? "1" : "" })
+            }
+          />
+          Verified email only
+        </label>
+        <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="accent-ember"
+            checked={values.has_mobile === "1"}
+            onChange={(e) =>
+              setValues({ has_mobile: e.target.checked ? "1" : "" })
+            }
+          />
+          Mobile number only
+        </label>
+        {stats && (
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-ink-mute">
+            <span className="rounded-full border border-line px-3 py-1">
+              <strong className="text-ink">{stats.total_count ?? 0}</strong> matched
+            </span>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-800">
+              <strong>{stats.verified_email_count ?? 0}</strong> verified email
+            </span>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-800">
+              <strong>{stats.checked_email_count ?? 0}</strong> domain-checked
+            </span>
+            <span className="rounded-full border border-line px-3 py-1">
+              <strong className="text-ink">{stats.mobile_count ?? 0}</strong> mobile
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Results */}
       <section>
         {loading ? (
@@ -371,6 +433,10 @@ function LeadRow({
           </div>
           <div className="text-xs text-ink-mute font-mono mt-1 truncate">
             {business.category ?? "Uncategorized"} · {formatLocation(business)}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+            <VerificationBadge verification={lead.contacts.find((c) => c.type === "EMAIL")?.verification} />
+            <PhoneTypeBadge lineType={lead.contacts.find((c) => c.type === "PHONE")?.verification?.line_type} />
           </div>
         </div>
 

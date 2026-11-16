@@ -21,6 +21,30 @@ export type ContactType =
   | "TIKTOK"
   | "TWITTER";
 
+export type VerificationStatus =
+  | "UNVERIFIED"
+  | "VALID"
+  | "RISKY"
+  | "CATCH_ALL"
+  | "INVALID"
+  | "UNKNOWN";
+
+export type PhoneLineType =
+  | "MOBILE"
+  | "LANDLINE"
+  | "VOIP"
+  | "TOLL_FREE"
+  | "UNKNOWN";
+
+export interface ContactVerification {
+  status: VerificationStatus;
+  confidence: number;
+  reason: string | null;
+  method: string | null;
+  checked_at: string | null;
+  line_type: PhoneLineType | null;
+}
+
 export type ContactSource =
   | "MAPS"
   | "WEBSITE"
@@ -119,6 +143,7 @@ export interface Contact {
   source: ContactSource;
   confidence_score: number;
   is_verified: boolean;
+  verification?: ContactVerification | null;
   created_at: string;
 }
 
@@ -233,6 +258,9 @@ export interface LeadListFilters {
   best_contact_method?: string;
   city?: string;
   country?: string;
+  verified_email?: boolean;
+  has_mobile?: boolean;
+  include_stats?: boolean;
 }
 
 export interface BusinessListFilters {
@@ -255,6 +283,10 @@ export interface PaginatedResponse<T> {
     limit: number;
     total: number;
     total_pages: number;
+    total_count?: number;
+    verified_email_count?: number;
+    checked_email_count?: number;
+    mobile_count?: number;
   };
 }
 

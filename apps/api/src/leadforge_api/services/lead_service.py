@@ -161,6 +161,61 @@ async def find_lead_ids(
     return list(result.scalars())
 
 
+async def lead_stats(
+    session: AsyncSession,
+    user_id: UUID,
+    *,
+    score_min: int | None = None,
+    score_max: int | None = None,
+    grade: str | None = None,
+    website_status: str | None = None,
+    best_contact_method: str | None = None,
+    city: str | None = None,
+    country: str | None = None,
+) -> dict[str, int]:
+    """Counts for the list summary chips, ignoring the verified/mobile toggles."""
+
+    async def _count(
+        *, verified_email: bool = False, has_mobile: bool = False, checked_email: bool = False
+    ) -> int:
+        where = lead_where(
+            user_id,
+            score_min=score_min,
+            score_max=score_max,
+            grade=grade,
+            website_status=website_status,
+            best_contact_method=best_contact_method,
+            city=city,
+            country=country,
+            verified_email=verified_email,
+            has_mobile=has_mobile,
+        )
+        if checked_email:
+            where.append(
+                exists().where(
+                    Contact.business_id == Business.id,
+                    Contact.type == ContactType.EMAIL,
+                    Contact.verification_status.in_(
+                        [VerificationStatus.VALID, VerificationStatus.RISKY]
+                    ),
+                )
+            )
+        value = await session.scalar(
+            select(func.count())
+            .select_from(Business)
+            .join(LeadScore, Business.id == LeadScore.business_id)
+            .where(*where)
+        )
+        return int(value or 0)
+
+    return {
+        "total_count": await _count(),
+        "verified_email_count": await _count(verified_email=True),
+        "checked_email_count": await _count(checked_email=True),
+        "mobile_count": await _count(has_mobile=True),
+    }
+
+
 async def get_lead(session: AsyncSession, user_id: UUID, business_id: UUID) -> Business:
     result = await session.execute(
         select(Business)

@@ -247,6 +247,9 @@ class ApiClient {
       ["best_contact_method", filters.best_contact_method],
       ["city", filters.city],
       ["country", filters.country],
+      ["verified_email", filters.verified_email ? "true" : undefined],
+      ["has_mobile", filters.has_mobile ? "true" : undefined],
+      ["include_stats", filters.include_stats ? "true" : undefined],
     ];
     for (const [key, value] of entries) {
       if (value !== undefined && value !== null && value !== "") {

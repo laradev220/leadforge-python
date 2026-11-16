@@ -29,6 +29,9 @@ async def list_leads(
     best_contact_method: str | None = None,
     city: str | None = None,
     country: str | None = None,
+    verified_email: bool = False,
+    has_mobile: bool = False,
+    include_stats: bool = False,
 ) -> dict:
     pagination = get_pagination({"page": str(page), "limit": str(limit)})
     businesses, total = await lead_service.list_leads(
@@ -43,7 +46,22 @@ async def list_leads(
         country=country,
         page=pagination.page,
         limit=pagination.limit,
+        verified_email=verified_email,
+        has_mobile=has_mobile,
     )
+    extra_meta = None
+    if include_stats:
+        extra_meta = await lead_service.lead_stats(
+            session,
+            user_id,
+            score_min=score_min,
+            score_max=score_max,
+            grade=grade,
+            website_status=website_status,
+            best_contact_method=best_contact_method,
+            city=city,
+            country=country,
+        )
     return paginated(
         [
             LeadResponse.model_validate(
@@ -60,6 +78,7 @@ async def list_leads(
         total,
         pagination.page,
         pagination.limit,
+        extra_meta,
     )
 
 
