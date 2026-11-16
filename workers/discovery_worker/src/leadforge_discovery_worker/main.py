@@ -20,6 +20,7 @@ from leadforge_scraper_core import search_businesses
 from leadforge_shared.types import DiscoveryJobData
 from leadforge_shared.utils import extract_domain, normalize_phone
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from leadforge_worker_core.events import emit_event
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -231,6 +232,15 @@ async def discovery_processor(data: DiscoveryJobData, logger):
         for business_id in to_enqueue:
             await enqueue_job("website", "website", {"business_id": str(business_id)})
 
+        await emit_event(
+            job.user_id,
+            "search.completed",
+            {
+                "search_job_id": str(search_job_id),
+                "discovered": discovered_count,
+                "new": len(to_enqueue),
+            },
+        )
         logger.info(
             "discovery_completed",
             searchJobId=str(search_job_id),

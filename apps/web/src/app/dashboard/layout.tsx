@@ -17,6 +17,7 @@ const NAV = [
   { href: "/dashboard/socials", label: "Socials" },
   { href: "/dashboard/exports", label: "Exports" },
   { href: "/dashboard/suppressions", label: "Suppressions" },
+  { href: "/dashboard/integrations", label: "Integrations" },
   { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/settings", label: "Settings" },
   { href: "/dashboard/admin", label: "Admin", admin: true },

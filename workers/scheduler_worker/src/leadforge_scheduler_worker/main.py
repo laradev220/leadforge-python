@@ -17,6 +17,7 @@ from leadforge_database import get_session_ctx
 from leadforge_database.models import SearchJob, SearchJobStatus, SearchSchedule
 from leadforge_shared.scheduling import compute_next_run
 from leadforge_worker_core.core import enqueue_job
+from leadforge_worker_core.events import emit_event
 from sqlalchemy import select
 
 logger = structlog.get_logger("scheduler")
@@ -24,7 +25,7 @@ logger = structlog.get_logger("scheduler")
 
 async def tick_once() -> int:
     now = datetime.now(UTC)
-    created: list[tuple[str, str | None]] = []
+    created: list[tuple[str, str | None, dict]] = []
 
     async with get_session_ctx() as session:
         result = await session.execute(
@@ -58,15 +59,36 @@ async def tick_once() -> int:
                 day_of_month=schedule.day_of_month,
                 tz_name=schedule.timezone,
             )
-            created.append((str(job.id), schedule.country))
+            created.append(
+                (
+                    str(job.id),
+                    schedule.country,
+                    {
+                        "schedule_id": str(schedule.id),
+                        "user_id": schedule.user_id,
+                        "keyword": schedule.keyword,
+                        "location": schedule.location,
+                    },
+                )
+            )
 
         await session.commit()
 
-    for job_id, country in created:
+    for job_id, country, meta in created:
         payload = {"search_job_id": job_id}
         if country:
             payload["country"] = country
         await enqueue_job("discovery", "discovery", payload)
+        await emit_event(
+            meta["user_id"],
+            "schedule.run",
+            {
+                "schedule_id": meta["schedule_id"],
+                "job_id": job_id,
+                "keyword": meta["keyword"],
+                "location": meta["location"],
+            },
+        )
 
     if created:
         logger.info("schedules_dispatched", count=len(created))

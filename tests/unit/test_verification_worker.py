@@ -28,6 +28,9 @@ class _FakeResult:
     def all(self):
         return self._rows
 
+    def __iter__(self):
+        return iter(())
+
 
 class _FakeSession:
     def __init__(self, contacts, country="PK"):
@@ -75,6 +78,14 @@ def _contact(
         line_type=None,
         is_verified=False,
     )
+
+
+@pytest.fixture(autouse=True)
+def _no_events(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_emit(*args, **kwargs):
+        return 0
+
+    monkeypatch.setattr(worker_main, "emit_event", fake_emit)
 
 
 def test_job_payload_defaults() -> None:

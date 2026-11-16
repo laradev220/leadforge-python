@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from leadforge_shared.types import (
@@ -341,6 +342,104 @@ class ScheduleRunResponse(BaseModel):
     total_discovered: int
     total_enriched: int
     created_at: datetime
+
+
+# ---------- Integrations ----------
+
+
+class IntegrationUpsertRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    config: dict[str, Any]
+    enabled: bool = True
+
+
+class IntegrationResponse(BaseModel):
+    kind: str
+    enabled: bool
+    summary: str
+    updated_at: datetime
+
+
+class IntegrationTestResponse(BaseModel):
+    ok: bool
+    detail: str
+
+
+class IntegrationPushRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    score_min: int | None = Field(default=None, ge=0, le=100)
+    score_max: int | None = Field(default=None, ge=0, le=100)
+    grade: str | None = None
+    verified_email: bool = False
+    limit: int = Field(default=100, ge=1, le=200)
+
+
+class IntegrationPushResponse(BaseModel):
+    pushed: int
+    failed: int
+    detail: str
+
+
+# ---------- Webhooks ----------
+
+WEBHOOK_EVENTS = (
+    "search.completed",
+    "export.completed",
+    "verification.completed",
+    "schedule.run",
+)
+
+
+class WebhookCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(min_length=12, max_length=2000)
+    events: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check_events(self):
+        unknown = [event for event in self.events if event not in WEBHOOK_EVENTS]
+        if unknown:
+            raise ValueError(f"Unknown events: {', '.join(unknown)}")
+        return self
+
+
+class WebhookUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str | None = Field(default=None, min_length=12, max_length=2000)
+    events: list[str] | None = Field(default=None, min_length=1)
+    active: bool | None = None
+
+    @model_validator(mode="after")
+    def _check_events(self):
+        if self.events is not None:
+            unknown = [event for event in self.events if event not in WEBHOOK_EVENTS]
+            if unknown:
+                raise ValueError(f"Unknown events: {', '.join(unknown)}")
+        return self
+
+
+class WebhookResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    url: str
+    events: list[str]
+    active: bool
+    secret: str
+    failure_count: int
+    last_delivery_at: datetime | None
+    created_at: datetime
+
+
+class WebhookDeliveryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    event: str
+    status: str
+    attempts: int
+    response_code: int | None
+    error: str | None
+    created_at: datetime
+    completed_at: datetime | None
 
 
 class SuppressionCreateRequest(BaseModel):

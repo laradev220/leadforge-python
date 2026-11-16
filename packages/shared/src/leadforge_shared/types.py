@@ -55,6 +55,11 @@ class PhoneLineType(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class IntegrationKind(StrEnum):
+    HUBSPOT = "HUBSPOT"
+    SHEETS = "SHEETS"
+
+
 class ScheduleCadence(StrEnum):
     DAILY = "DAILY"
     WEEKLY = "WEEKLY"
@@ -128,6 +133,7 @@ QueueName = Literal[
     "verification",
     "scoring",
     "export",
+    "webhook",
 ]
 
 

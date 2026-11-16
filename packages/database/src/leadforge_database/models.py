@@ -11,6 +11,7 @@ from leadforge_shared.types import (
     ContactType,
     EnrichmentStatus,
     ExportFormat,
+    IntegrationKind,
     PhoneLineType,
     ScheduleCadence,
     SearchJobStatus,
@@ -502,6 +503,73 @@ class Export(Base):
     __table_args__ = (
         Index("ix_exports_user_id", "user_id"),
         Index("ix_exports_status", "status"),
+    )
+
+
+class Integration(Base):
+    __tablename__ = "integrations"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("users.id"), nullable=False)
+    kind: Mapped[IntegrationKind] = mapped_column(
+        SAEnum(
+            IntegrationKind,
+            name="integration_kind",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    config_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = _now()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "kind", name="uq_integrations_user_kind"),
+        Index("ix_integrations_user_id", "user_id"),
+    )
+
+
+class WebhookEndpoint(Base):
+    __tablename__ = "webhook_endpoints"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("users.id"), nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    secret: Mapped[str] = mapped_column(String(128), nullable=False)
+    events: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_delivery_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _now()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (Index("ix_webhook_endpoints_user_id", "user_id"),)
+
+
+class WebhookDelivery(Base):
+    __tablename__ = "webhook_deliveries"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    endpoint_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), nullable=False
+    )
+    event: Mapped[str] = mapped_column(String(80), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="PENDING", nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    response_code: Mapped[int | None] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = _now()
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_webhook_deliveries_endpoint_id", "endpoint_id"),
+        Index("ix_webhook_deliveries_created_at", "created_at"),
     )
 
 

@@ -11,7 +11,13 @@ from uuid import UUID
 
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
-from leadforge_database.models import Business, Contact, ContactType
+from leadforge_database.models import (
+    Business,
+    Contact,
+    ContactType,
+    SearchJob,
+    SearchJobBusiness,
+)
 from leadforge_database.provenance import record_provenance
 from leadforge_shared.types import (
     PhoneLineType,
@@ -25,6 +31,7 @@ from leadforge_verification import (
     verify_email,
 )
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from leadforge_worker_core.events import emit_event
 from sqlalchemy import select
 
 _verifier: EmailVerifier | None = None
@@ -67,6 +74,14 @@ async def verification_processor(data: VerificationJobData, log):
 
         result = await session.execute(select(Contact).where(Contact.business_id == business_id))
         contacts = list(result.scalars().all())
+
+        owner_rows = await session.execute(
+            select(SearchJob.user_id)
+            .join(SearchJobBusiness, SearchJobBusiness.search_job_id == SearchJob.id)
+            .where(SearchJobBusiness.business_id == business_id)
+            .distinct()
+        )
+        owner_ids = list(owner_rows.scalars())
 
         emails = 0
         phones = 0
@@ -139,6 +154,17 @@ async def verification_processor(data: VerificationJobData, log):
         skipped_fresh=skipped,
         force=data.force,
     )
+    for owner_id in owner_ids:
+        await emit_event(
+            owner_id,
+            "verification.completed",
+            {
+                "business_id": str(business_id),
+                "emails": emails,
+                "phones": phones,
+                "skipped_fresh": skipped,
+            },
+        )
     await enqueue_job("scoring", "scoring", {"business_id": str(business_id)})
 
 

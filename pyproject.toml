@@ -20,6 +20,7 @@ dependencies = [
     "scoring-worker",
     "export-worker",
     "scheduler-worker",
+    "webhook-worker",
 ]
 
 [tool.uv.workspace]
@@ -33,6 +34,7 @@ members = [
     "workers/scoring_worker",
     "workers/export_worker",
     "workers/scheduler_worker",
+    "workers/webhook_worker",
     "packages/config",
     "packages/shared",
     "packages/database",
@@ -69,6 +71,7 @@ verification-worker = { workspace = true }
 scoring-worker = { workspace = true }
 export-worker = { workspace = true }
 scheduler-worker = { workspace = true }
+webhook-worker = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

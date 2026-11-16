@@ -18,7 +18,16 @@ from leadforge_config import get_redis_client
 
 from leadforge_api.core.queue import get_pool
 
-_QUEUE_NAMES = ("discovery", "website", "contact", "social", "verification", "scoring", "export")
+_QUEUE_NAMES = (
+    "discovery",
+    "website",
+    "contact",
+    "social",
+    "verification",
+    "scoring",
+    "export",
+    "webhook",
+)
 
 _RESULT_PREFIX = "arq:result:"
 _JOB_PREFIX = "arq:job:"

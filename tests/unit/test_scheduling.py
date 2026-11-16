@@ -153,8 +153,12 @@ class TestSchedulerTick:
         async def fake_enqueue(queue_name, job_name, payload):
             enqueued.append((queue_name, job_name, payload))
 
+        async def fake_emit(*args, **kwargs):
+            return 0
+
         monkeypatch.setattr(scheduler, "get_session_ctx", fake_ctx)
         monkeypatch.setattr(scheduler, "enqueue_job", fake_enqueue)
+        monkeypatch.setattr(scheduler, "emit_event", fake_emit)
 
         dispatched = await scheduler.tick_once()
 

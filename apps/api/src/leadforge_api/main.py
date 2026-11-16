@@ -21,6 +21,7 @@ from leadforge_api.routes import (
     auth,
     businesses,
     exports,
+    integrations,
     jobs,
     leads,
     schedules,
@@ -28,6 +29,7 @@ from leadforge_api.routes import (
     social_profiles,
     suppressions,
     verification,
+    webhooks,
 )
 from leadforge_api.routes.scrapers import router as scrapers_router
 
@@ -89,6 +91,8 @@ app.include_router(social_profiles.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(suppressions.router, prefix=API_PREFIX)
 app.include_router(schedules.router, prefix=API_PREFIX)
+app.include_router(webhooks.router, prefix=API_PREFIX)
+app.include_router(integrations.router, prefix=API_PREFIX)
 app.include_router(jobs.router, prefix=API_PREFIX)
 app.include_router(verification.router, prefix=API_PREFIX)
 

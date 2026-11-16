@@ -29,6 +29,7 @@ from leadforge_shared.types import (
     VerificationStatus,
 )
 from leadforge_worker_core.core import WorkerWrapper
+from leadforge_worker_core.events import emit_event
 from openpyxl import Workbook
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -284,6 +285,15 @@ async def export_processor(data: ExportJobData, logger):
             if exp.filters is None and data.filters is not None:
                 exp.filters = data.filters.model_dump(mode="json", exclude_none=True) or None
             await session.commit()
+            await emit_event(
+                exp.user_id,
+                "export.completed",
+                {
+                    "export_id": str(export_id),
+                    "format": fmt.value,
+                    "records": len(rows),
+                },
+            )
             logger.info(
                 "export_completed",
                 exportId=str(export_id),

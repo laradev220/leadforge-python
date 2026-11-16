@@ -41,6 +41,8 @@ PROTECTED_ROUTES = (
     "/api/v1/jobs/activity",
     "/api/v1/verification/capabilities",
     "/api/v1/schedules",
+    "/api/v1/webhooks",
+    "/api/v1/integrations",
 )
 
 

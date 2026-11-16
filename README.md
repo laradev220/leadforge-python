@@ -321,6 +321,26 @@ POST /api/v1/schedules
 - `GET /schedules/{id}/runs` lists the schedule's search jobs.
 - `SCHEDULE_POLL_SECONDS` controls how often the scheduler checks for due rows.
 
+## Webhooks and integrations
+
+Webhook endpoints receive signed POSTs for `search.completed`,
+`export.completed`, `verification.completed`, and `schedule.run`.
+
+- Header `X-LeadForge-Signature` is `HMAC-SHA256(secret, "<timestamp>.<body>")`.
+- `X-LeadForge-Timestamp` and `X-LeadForge-Delivery` are included.
+- Delivery retries up to 5 times; endpoints auto-disable after 20 consecutive failures.
+- URLs must be public HTTPS (loopback/private ranges are rejected at save and delivery).
+
+CRM/Sheets credentials are encrypted with `INTEGRATIONS_SECRET` (falls back to
+`JWT_SECRET`). HubSpot uses a private-app token; Sheets uses a service-account
+JSON with edit access to the target spreadsheet.
+
+```bash
+GET/POST /api/v1/webhooks        # endpoints (secret returned for HMAC)
+POST     /api/v1/integrations/{HUBSPOT|SHEETS}/push
+POST     /api/v1/integrations/{kind}/test
+```
+
 ## Running Workers
 
 Each worker is a separate service that consumes from a specific Arq queue.
@@ -349,6 +369,9 @@ uv run --package export-worker python -m leadforge_export_worker
 
 # Scheduler — dispatches due recurring searches (polling process, not an arq consumer)
 uv run --package scheduler-worker python -m leadforge_scheduler_worker
+
+# Webhook — delivers signed event callbacks with retries
+uv run --package webhook-worker python -m leadforge_webhook_worker
 ```
 
 **Pipeline Flow:**
@@ -589,6 +612,26 @@ POST /api/v1/schedules
 - `PATCH /schedules/{id}` toggles `enabled` or edits timing.
 - `GET /schedules/{id}/runs` lists the schedule's search jobs.
 - `SCHEDULE_POLL_SECONDS` controls how often the scheduler checks for due rows.
+
+## Webhooks and integrations
+
+Webhook endpoints receive signed POSTs for `search.completed`,
+`export.completed`, `verification.completed`, and `schedule.run`.
+
+- Header `X-LeadForge-Signature` is `HMAC-SHA256(secret, "<timestamp>.<body>")`.
+- `X-LeadForge-Timestamp` and `X-LeadForge-Delivery` are included.
+- Delivery retries up to 5 times; endpoints auto-disable after 20 consecutive failures.
+- URLs must be public HTTPS (loopback/private ranges are rejected at save and delivery).
+
+CRM/Sheets credentials are encrypted with `INTEGRATIONS_SECRET` (falls back to
+`JWT_SECRET`). HubSpot uses a private-app token; Sheets uses a service-account
+JSON with edit access to the target spreadsheet.
+
+```bash
+GET/POST /api/v1/webhooks        # endpoints (secret returned for HMAC)
+POST     /api/v1/integrations/{HUBSPOT|SHEETS}/push
+POST     /api/v1/integrations/{kind}/test
+```
 
 ## Running Workers in Development
 

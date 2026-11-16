@@ -12,8 +12,13 @@ import type {
   ScheduleCadence,
   ScheduleRun,
   SearchJobProgress,
+  IntegrationKind,
+  IntegrationSummary,
   SearchSchedule,
   Suppression,
+  WebhookDelivery,
+  WebhookEndpoint,
+  WebhookEvent,
   VerificationCapabilities,
   GradeDistribution,
   Lead,
@@ -129,6 +134,85 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  }
+
+  async listWebhooks(): Promise<SingleResponse<WebhookEndpoint[]>> {
+    return this.request<SingleResponse<WebhookEndpoint[]>>(`/webhooks`);
+  }
+
+  async createWebhook(payload: {
+    url: string;
+    events: WebhookEvent[];
+  }): Promise<SingleResponse<WebhookEndpoint>> {
+    return this.request(`/webhooks`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateWebhook(
+    id: string,
+    payload: { events?: WebhookEvent[]; active?: boolean; url?: string },
+  ): Promise<SingleResponse<WebhookEndpoint>> {
+    return this.request(`/webhooks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteWebhook(id: string): Promise<SingleResponse<{ deleted: true }>> {
+    return this.request(`/webhooks/${id}`, { method: "DELETE" });
+  }
+
+  async rotateWebhookSecret(
+    id: string,
+  ): Promise<SingleResponse<WebhookEndpoint>> {
+    return this.request(`/webhooks/${id}/rotate-secret`, { method: "POST" });
+  }
+
+  async listWebhookDeliveries(
+    id: string,
+    limit = 10,
+  ): Promise<SingleResponse<WebhookDelivery[]>> {
+    return this.request<SingleResponse<WebhookDelivery[]>>(
+      `/webhooks/${id}/deliveries?limit=${limit}`,
+    );
+  }
+
+  async listIntegrations(): Promise<SingleResponse<IntegrationSummary[]>> {
+    return this.request<SingleResponse<IntegrationSummary[]>>(`/integrations`);
+  }
+
+  async saveIntegration(
+    kind: IntegrationKind,
+    config: Record<string, unknown>,
+  ): Promise<SingleResponse<IntegrationSummary>> {
+    return this.request(`/integrations/${kind}`, {
+      method: "PUT",
+      body: JSON.stringify({ config }),
+    });
+  }
+
+  async testIntegration(
+    kind: IntegrationKind,
+  ): Promise<SingleResponse<{ ok: boolean; detail: string }>> {
+    return this.request(`/integrations/${kind}/test`, { method: "POST" });
+  }
+
+  async pushIntegration(
+    kind: IntegrationKind,
+    payload: { limit?: number; score_min?: number; verified_email?: boolean } = {},
+  ): Promise<SingleResponse<{ pushed: number; failed: number; detail: string }>> {
+    return this.request(`/integrations/${kind}/push`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteIntegration(
+    kind: IntegrationKind,
+  ): Promise<SingleResponse<{ deleted: true }>> {
+    return this.request(`/integrations/${kind}`, { method: "DELETE" });
   }
 
   async listSchedules(): Promise<SingleResponse<SearchSchedule[]>> {

@@ -222,6 +222,43 @@ export interface Lead {
 
 export type ScheduleCadence = "DAILY" | "WEEKLY" | "MONTHLY";
 
+export type IntegrationKind = "HUBSPOT" | "SHEETS";
+
+export type WebhookEvent =
+  | "search.completed"
+  | "export.completed"
+  | "verification.completed"
+  | "schedule.run";
+
+export interface WebhookEndpoint {
+  id: string;
+  url: string;
+  events: WebhookEvent[];
+  active: boolean;
+  secret: string;
+  failure_count: number;
+  last_delivery_at: string | null;
+  created_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  event: string;
+  status: string;
+  attempts: number;
+  response_code: number | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface IntegrationSummary {
+  kind: IntegrationKind;
+  enabled: boolean;
+  summary: string;
+  updated_at: string;
+}
+
 export interface SearchSchedule {
   id: string;
   keyword: string;
