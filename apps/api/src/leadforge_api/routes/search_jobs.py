@@ -73,6 +73,13 @@ async def list_search_jobs(
     )
 
 
+@router.get("/{job_id}/progress", response_model=None)
+async def job_progress(job_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
+    from uuid import UUID
+
+    return success(await search_job_service.progress(session, user_id, UUID(job_id)))
+
+
 @router.get("/{job_id}", response_model=None)
 async def get_search_job(job_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     from uuid import UUID

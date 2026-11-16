@@ -82,3 +82,85 @@ async def cancel(session: AsyncSession, user_id: UUID, job_id: UUID) -> None:
 
     job.status = SearchJobStatus.CANCELLED
     await session.commit()
+
+
+async def progress(session: AsyncSession, user_id: UUID, job_id: UUID) -> dict:
+    """Stage counts + completion percentage for the job progress UI."""
+    from leadforge_database.models import (
+        Business,
+        Contact,
+        ContactType,
+        LeadScore,
+        SearchJobBusiness,
+        SocialProfile,
+        VerificationStatus,
+        WebsiteStatus,
+    )
+    from sqlalchemy import exists, func
+
+    job = (
+        await session.execute(
+            select(SearchJob).where(SearchJob.id == job_id, SearchJob.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if job is None:
+        raise not_found("Search job not found")
+
+    linked = select(SearchJobBusiness.business_id).where(SearchJobBusiness.search_job_id == job_id)
+    scope = Business.id.in_(linked)
+
+    async def _count(*extra) -> int:
+        value = await session.scalar(
+            select(func.count()).select_from(Business).where(scope, *extra)
+        )
+        return int(value or 0)
+
+    website = await _count(Business.website_status != WebsiteStatus.UNKNOWN)
+    contacts = await _count(exists().where(Contact.business_id == Business.id))
+    socials = await _count(exists().where(SocialProfile.business_id == Business.id))
+    verified = await _count(
+        exists().where(
+            Contact.business_id == Business.id,
+            Contact.type == ContactType.EMAIL,
+            Contact.verification_status == VerificationStatus.VALID,
+        )
+    )
+    checked = await _count(
+        exists().where(
+            Contact.business_id == Business.id,
+            Contact.type == ContactType.EMAIL,
+            Contact.verification_status.in_([VerificationStatus.VALID, VerificationStatus.RISKY]),
+        )
+    )
+    scored = await _count(exists().where(LeadScore.business_id == Business.id))
+
+    linked_total = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(SearchJobBusiness)
+            .where(SearchJobBusiness.search_job_id == job_id)
+        )
+        or 0
+    )
+    # Re-runs can add links without updating total_discovered; the link count is
+    # the truthful denominator.
+    total = max(linked_total, int(job.total_discovered or 0))
+    enriched = min(int(job.total_enriched or 0), total)
+    percent = min(100, round((enriched / total) * 100)) if total else 0
+    return {
+        "job_id": str(job.id),
+        "status": job.status.value,
+        "keyword": job.keyword,
+        "location": job.location,
+        "total_discovered": total,
+        "total_enriched": enriched,
+        "percent": percent,
+        "stages": {
+            "website": website,
+            "contacts": contacts,
+            "socials": socials,
+            "verified": verified,
+            "checked": checked,
+            "scored": scored,
+        },
+    }

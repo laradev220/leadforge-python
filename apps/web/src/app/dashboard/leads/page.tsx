@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUpRight, Loader2, RefreshCw } from "lucide-react";
+import { ArrowUpRight, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Lead, LeadGrade, WebsiteStatus } from "@/lib/types";
 import { useUrlFilters } from "@/lib/use-url-filters";
@@ -184,6 +184,21 @@ export default function LeadsPage() {
     }
   }
 
+  async function bulkVerify() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await api.bulkVerifyBusinesses(ids);
+      toast.success(`Verification queued for ${res.data.queued} leads`);
+      setSelected(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bulk verify failed");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   // Quick counts per grade (top of page)
   const gradeCounts = useMemo(() => {
     const counts: Partial<Record<LeadGrade, number>> = {};
@@ -346,6 +361,14 @@ export default function LeadsPage() {
                     <RefreshCw size={12} />
                   )}
                   Re-enrich
+                </button>
+                <button
+                  onClick={bulkVerify}
+                  disabled={bulkLoading}
+                  className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                >
+                  <ShieldCheck size={12} />
+                  Verify
                 </button>
                 <button
                   onClick={() => setSelected(new Set())}

@@ -265,6 +265,11 @@ class SuppressionCreateRequest(BaseModel):
     note: str | None = None
 
 
+class SuppressionBulkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    entries: list[SuppressionCreateRequest] = Field(min_length=1, max_length=1000)
+
+
 class SuppressionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -281,6 +286,7 @@ class SuppressionResponse(BaseModel):
 class BulkVerifyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    business_ids: list[UUID] | None = Field(default=None, max_length=500)
     score_min: int | None = Field(default=None, ge=0, le=100)
     score_max: int | None = Field(default=None, ge=0, le=100)
     grade: str | None = None

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from leadforge_database.models import Business
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from leadforge_api.core.queue import enqueue_verification
+from leadforge_api.core.tenancy import user_business_ids
 from leadforge_api.services import business_service, lead_service
 
 
@@ -27,20 +30,29 @@ async def enqueue_bulk(
     limit: int = 500,
 ) -> int:
     """Queue verification for up to ``limit`` leads matching ``filters``."""
-    ids = await lead_service.find_lead_ids(
-        session,
-        user_id,
-        score_min=filters.score_min,
-        score_max=filters.score_max,
-        grade=filters.grade,
-        website_status=filters.website_status,
-        best_contact_method=filters.best_contact_method,
-        city=filters.city,
-        country=filters.country,
-        verified_email=filters.verified_email,
-        has_mobile=filters.has_mobile,
-        limit=min(limit, filters.limit),
-    )
+    if filters.business_ids:
+        wanted = list(dict.fromkeys(filters.business_ids))[: min(limit, filters.limit)]
+        rows = await session.execute(
+            select(Business.id).where(
+                Business.id.in_(wanted), Business.id.in_(user_business_ids(user_id))
+            )
+        )
+        ids = list(rows.scalars())
+    else:
+        ids = await lead_service.find_lead_ids(
+            session,
+            user_id,
+            score_min=filters.score_min,
+            score_max=filters.score_max,
+            grade=filters.grade,
+            website_status=filters.website_status,
+            best_contact_method=filters.best_contact_method,
+            city=filters.city,
+            country=filters.country,
+            verified_email=filters.verified_email,
+            has_mobile=filters.has_mobile,
+            limit=min(limit, filters.limit),
+        )
     for business_id in ids:
         await enqueue_verification(business_id, force=force)
     return len(ids)

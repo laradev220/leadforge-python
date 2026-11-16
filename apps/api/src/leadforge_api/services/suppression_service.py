@@ -79,3 +79,41 @@ async def matching_values(
     phones = {row.value for row in rows if row.kind == SuppressionKind.PHONE}
     domains = {row.value for row in rows if row.kind == SuppressionKind.DOMAIN}
     return emails, phones, domains
+
+
+async def bulk_add(session: AsyncSession, user_id: UUID, entries: list[dict]) -> tuple[int, int]:
+    """Insert many entries idempotently. Returns (added, skipped_duplicates)."""
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    if not entries:
+        return 0, 0
+    values = []
+    seen: set[tuple[str, str]] = set()
+    for entry in entries:
+        kind = SuppressionKind(entry["kind"])
+        value = normalize_value(kind, entry["value"])
+        key = (kind.value, value)
+        if key in seen:
+            continue
+        seen.add(key)
+        values.append(
+            {
+                "user_id": user_id,
+                "kind": kind,
+                "value": value,
+                "reason": entry.get("reason", "manual"),
+                "note": entry.get("note"),
+            }
+        )
+    if not values:
+        return 0, len(entries)
+
+    statement = (
+        pg_insert(Suppression)
+        .values(values)
+        .on_conflict_do_nothing(constraint="uq_suppressions_user_kind_value")
+        .returning(Suppression.id)
+    )
+    added = len(list((await session.execute(statement)).scalars()))
+    await session.commit()
+    return added, len(entries) - added

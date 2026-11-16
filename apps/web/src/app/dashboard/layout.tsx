@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import { LogOut, Compass, Moon, Sun, Menu, X } from "lucide-react";
+import { EngineDock } from "@/components/engine-dock";
 
 const NAV = [
   { href: "/dashboard", label: "Overview" },
@@ -14,6 +15,7 @@ const NAV = [
   { href: "/dashboard/businesses", label: "Businesses" },
   { href: "/dashboard/socials", label: "Socials" },
   { href: "/dashboard/exports", label: "Exports" },
+  { href: "/dashboard/suppressions", label: "Suppressions" },
   { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/settings", label: "Settings" },
   { href: "/dashboard/admin", label: "Admin", admin: true },
@@ -163,6 +165,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+
+      <EngineDock />
     </div>
   );
 }

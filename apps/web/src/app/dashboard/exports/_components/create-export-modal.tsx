@@ -11,6 +11,7 @@ import type {
   LeadGrade,
   WebsiteStatus,
   ContactType,
+  VerificationCapabilities,
 } from "@/lib/types";
 import {
   EXPORT_FORMATS,
@@ -45,6 +46,8 @@ export function CreateExportModal({
     verified: number;
     checked: number;
   } | null>(null);
+  const [capabilities, setCapabilities] =
+    useState<VerificationCapabilities | null>(null);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -54,6 +57,17 @@ export function CreateExportModal({
     return () => {
       document.body.style.overflow = prev;
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    api
+      .getVerificationCapabilities()
+      .then((res) => {
+        setCapabilities(res.data);
+        if (!res.data.supports_valid) setVerifiedOnly(false);
+      })
+      .catch(() => setCapabilities(null));
   }, [open]);
 
   // Coverage preview (counts only; suppression is enforced server-side)
@@ -292,6 +306,16 @@ export function CreateExportModal({
                 <span className="block text-xs text-ink-mute mt-0.5">
                   Requires mailbox-level verification (SMTP or provider). MX-only
                   results count as domain-checked, not verified.
+                  {capabilities && (
+                    <>
+                      {" "}
+                      Current provider: <strong>{capabilities.provider}</strong>
+                      {capabilities.supports_valid
+                        ? " (mailbox-verified available)"
+                        : " (domain-checked only)"}
+                      .
+                    </>
+                  )}
                 </span>
               </span>
             </label>

@@ -12,7 +12,7 @@ import structlog
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from leadforge_config import get_settings
 from leadforge_database.models import EnrichmentRun, EnrichmentStatus, JobQueueLog
-from sqlalchemy import insert
+from sqlalchemy import insert, update
 
 T = TypeVar("T")
 Processor = Callable[[T, structlog.BoundLogger], Coroutine[Any, Any, None]]
@@ -32,17 +32,122 @@ class WorkerWrapper[T]:
             business_id = None
 
         self.logger.info("job_started", jobId=job_id, businessId=business_id)
+        job_log_id, run_id = await self._start_tracking(job_id, business_id)
 
         try:
             await self.processor(data, self.logger)
             duration = int((time.time() - start) * 1000)
             self.logger.info("job_completed", jobId=job_id, duration=duration)
-            await self._log_to_db(job_id, "COMPLETED", duration, business_id=business_id)
+            await self._finish_tracking(
+                job_log_id, run_id, job_id, "COMPLETED", duration, None, business_id
+            )
         except Exception as e:
             duration = int((time.time() - start) * 1000)
             self.logger.error("job_failed", jobId=job_id, duration=duration, error=str(e))
-            await self._log_to_db(job_id, "FAILED", duration, error=str(e), business_id=business_id)
+            await self._finish_tracking(
+                job_log_id, run_id, job_id, "FAILED", duration, str(e), business_id
+            )
             raise e
+
+    async def _start_tracking(
+        self, job_id: str, business_id: UUID | None
+    ) -> tuple[UUID | None, UUID | None]:
+        """Create RUNNING rows so the UI can show live pipeline activity."""
+        from leadforge_database import get_session_ctx
+
+        try:
+            async with get_session_ctx() as session:
+                job_log_id = await session.scalar(
+                    insert(JobQueueLog)
+                    .values(
+                        job_id=job_id,
+                        queue_name=self.name,
+                        worker_name=self.name,
+                        status="RUNNING",
+                        duration_ms=None,
+                    )
+                    .returning(JobQueueLog.id)
+                )
+                run_id = None
+                if business_id is not None:
+                    run_id = await session.scalar(
+                        insert(EnrichmentRun)
+                        .values(
+                            business_id=business_id,
+                            worker_name=self.name,
+                            status=EnrichmentStatus.RUNNING,
+                            started_at=datetime.now(UTC),
+                            metadata_={"job_id": job_id},
+                        )
+                        .returning(EnrichmentRun.id)
+                    )
+                await session.commit()
+                return job_log_id, run_id
+        except Exception:
+            self.logger.warning("failed_to_start_job_tracking", jobId=job_id)
+            return None, None
+
+    async def _finish_tracking(
+        self,
+        job_log_id: UUID | None,
+        run_id: UUID | None,
+        job_id: str,
+        status: str,
+        duration: int,
+        error: str | None,
+        business_id: UUID | None,
+    ) -> None:
+        from leadforge_database import get_session_ctx
+
+        run_status = (
+            EnrichmentStatus.COMPLETED if status == "COMPLETED" else EnrichmentStatus.FAILED
+        )
+        now = datetime.now(UTC)
+        try:
+            async with get_session_ctx() as session:
+                if job_log_id is not None:
+                    await session.execute(
+                        update(JobQueueLog)
+                        .where(JobQueueLog.id == job_log_id)
+                        .values(status=status, duration_ms=duration, error_message=error)
+                    )
+                else:
+                    await session.execute(
+                        insert(JobQueueLog).values(
+                            job_id=job_id,
+                            queue_name=self.name,
+                            worker_name=self.name,
+                            status=status,
+                            duration_ms=duration,
+                            error_message=error,
+                        )
+                    )
+                if run_id is not None:
+                    await session.execute(
+                        update(EnrichmentRun)
+                        .where(EnrichmentRun.id == run_id)
+                        .values(
+                            status=run_status,
+                            completed_at=now,
+                            error_message=error,
+                            metadata_={"job_id": job_id, "duration_ms": duration},
+                        )
+                    )
+                elif business_id is not None:
+                    await session.execute(
+                        insert(EnrichmentRun).values(
+                            business_id=business_id,
+                            worker_name=self.name,
+                            status=run_status,
+                            started_at=now - timedelta(milliseconds=duration),
+                            completed_at=now,
+                            error_message=error,
+                            metadata_={"job_id": job_id, "duration_ms": duration},
+                        )
+                    )
+                await session.commit()
+        except Exception:
+            self.logger.warning("failed_to_finish_job_tracking", jobId=job_id)
 
     def get_function(self) -> Callable[..., Coroutine[Any, Any, None]]:
         """Return a coroutine function compatible with arq."""
@@ -53,51 +158,6 @@ class WorkerWrapper[T]:
         _wrapper.__name__ = self.name
         _wrapper.__qualname__ = self.name
         return _wrapper
-
-    async def _log_to_db(
-        self,
-        job_id: str,
-        status: str,
-        duration: int,
-        error: str | None = None,
-        *,
-        business_id: UUID | None = None,
-    ) -> None:
-        from leadforge_database import get_session_ctx
-
-        async with get_session_ctx() as session:
-            try:
-                await session.execute(
-                    insert(JobQueueLog).values(
-                        job_id=job_id,
-                        queue_name=self.name,
-                        worker_name=self.name,
-                        status=status,
-                        duration_ms=duration,
-                        error_message=error,
-                    )
-                )
-                if business_id is not None:
-                    completed_at = datetime.now(UTC)
-                    started_at = completed_at - timedelta(milliseconds=duration)
-                    await session.execute(
-                        insert(EnrichmentRun).values(
-                            business_id=business_id,
-                            worker_name=self.name,
-                            status=(
-                                EnrichmentStatus.COMPLETED
-                                if status == "COMPLETED"
-                                else EnrichmentStatus.FAILED
-                            ),
-                            started_at=started_at,
-                            completed_at=completed_at,
-                            error_message=error,
-                        )
-                    )
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                self.logger.warning("failed_to_log_job_to_db", jobId=job_id)
 
 
 def arq_redis_settings() -> RedisSettings:

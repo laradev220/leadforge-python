@@ -5,9 +5,13 @@ import type {
   BusinessListFilters,
   Contact,
   DashboardStats,
+  EngineActivity,
   ExportFilters,
   ExportFormat,
   ExportRecord,
+  SearchJobProgress,
+  Suppression,
+  VerificationCapabilities,
   GradeDistribution,
   Lead,
   LeadListFilters,
@@ -306,6 +310,67 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  }
+
+  async getSearchJobProgress(
+    id: string,
+  ): Promise<SingleResponse<SearchJobProgress>> {
+    return this.request<SingleResponse<SearchJobProgress>>(
+      `/search-jobs/${id}/progress`,
+    );
+  }
+
+  async getEngineActivity(limit = 25): Promise<SingleResponse<EngineActivity>> {
+    return this.request<SingleResponse<EngineActivity>>(
+      `/jobs/activity?recent_limit=${limit}`,
+    );
+  }
+
+  async getVerificationCapabilities(): Promise<
+    SingleResponse<VerificationCapabilities>
+  > {
+    return this.request<SingleResponse<VerificationCapabilities>>(
+      `/verification/capabilities`,
+    );
+  }
+
+  async bulkVerifyBusinesses(
+    businessIds: string[],
+    force = false,
+  ): Promise<SingleResponse<{ queued: number }>> {
+    return this.request(`/businesses/verify`, {
+      method: "POST",
+      body: JSON.stringify({ business_ids: businessIds, force }),
+    });
+  }
+
+  async listSuppressions(): Promise<SingleResponse<Suppression[]>> {
+    return this.request<SingleResponse<Suppression[]>>(`/suppressions`);
+  }
+
+  async addSuppression(payload: {
+    kind: Suppression["kind"];
+    value: string;
+    reason?: string;
+    note?: string;
+  }): Promise<SingleResponse<Suppression>> {
+    return this.request(`/suppressions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async bulkAddSuppressions(
+    entries: Array<Pick<Suppression, "kind" | "value"> & { reason?: string }>,
+  ): Promise<SingleResponse<{ added: number; skipped: number }>> {
+    return this.request(`/suppressions/bulk`, {
+      method: "POST",
+      body: JSON.stringify({ entries }),
+    });
+  }
+
+  async deleteSuppression(id: string): Promise<SingleResponse<{ deleted: true }>> {
+    return this.request(`/suppressions/${id}`, { method: "DELETE" });
   }
 
   async listExports(): Promise<SingleResponse<ExportRecord[]>> {

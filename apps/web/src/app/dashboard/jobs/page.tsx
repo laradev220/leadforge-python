@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import type { SearchJob, SearchJobStatus } from "@/lib/types";
+import type { SearchJob, SearchJobProgress, SearchJobStatus } from "@/lib/types";
 import { formatRelative } from "@/lib/utils";
 import { ArrowUpRight, Loader2, X } from "lucide-react";
 
@@ -149,11 +149,63 @@ export default function JobsPage() {
                     )}
                   </div>
                 </div>
+                {job.status === "RUNNING" && <JobProgress jobId={job.id} />}
               </li>
             ))}
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function JobProgress({ jobId }: { jobId: string }) {
+  const [progress, setProgress] = useState<SearchJobProgress | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      api
+        .getSearchJobProgress(jobId)
+        .then((res) => {
+          if (!cancelled) setProgress(res.data);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const interval = setInterval(load, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [jobId]);
+
+  if (!progress) return null;
+  const stage = (label: string, value: number) => (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-ink-ghost">{label}</span>
+      <span className="text-ink">{value}</span>
+    </span>
+  );
+
+  return (
+    <div className="px-2 pb-4 -mt-1 space-y-2">
+      <div className="h-1 w-full overflow-hidden rounded bg-line">
+        <div
+          className="h-full bg-ember transition-[width] duration-700"
+          style={{ width: `${Math.max(progress.percent, 4)}%` }}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono uppercase tracking-wider text-ink-mute">
+        <span>
+          {progress.total_enriched}/{progress.total_discovered} enriched
+        </span>
+        {stage("site", progress.stages.website)}
+        {stage("contacts", progress.stages.contacts)}
+        {stage("social", progress.stages.socials)}
+        {stage("checked", progress.stages.checked)}
+        {stage("scored", progress.stages.scored)}
+      </div>
     </div>
   );
 }

@@ -18,7 +18,12 @@ from leadforge_api.core.errors import AppError
 from leadforge_api.core.ratelimit import enforce_rate_limit
 from leadforge_api.core.response import paginated
 from leadforge_api.main import app
-from leadforge_api.schemas import BulkVerifyRequest, CreateExportRequest
+from leadforge_api.schemas import (
+    BulkVerifyRequest,
+    CreateExportRequest,
+    SuppressionBulkRequest,
+    SuppressionCreateRequest,
+)
 from leadforge_export_worker.main import export as export_job
 from leadforge_shared.types import ExportFilters, ExportJobData
 from pydantic import ValidationError
@@ -33,6 +38,8 @@ PROTECTED_ROUTES = (
     "/api/v1/exports",
     f"/api/v1/businesses/{uuid.uuid4()}/provenance",
     "/api/v1/suppressions",
+    "/api/v1/jobs/activity",
+    "/api/v1/verification/capabilities",
 )
 
 
@@ -96,6 +103,19 @@ class TestBulkVerifySchema:
         assert body.limit == 500
         assert body.force is False
         assert body.verified_email is False
+        assert body.business_ids is None
+
+    def test_business_ids_are_capped(self) -> None:
+        with pytest.raises(ValidationError):
+            BulkVerifyRequest(business_ids=[uuid.uuid4() for _ in range(501)])
+
+    def test_suppression_bulk_shape(self) -> None:
+        body = SuppressionBulkRequest(
+            entries=[SuppressionCreateRequest(kind="EMAIL", value="a@b.com")]
+        )
+        assert len(body.entries) == 1
+        with pytest.raises(ValidationError):
+            SuppressionBulkRequest(entries=[])
 
 
 class TestPaginationContract:

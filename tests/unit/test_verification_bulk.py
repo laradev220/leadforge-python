@@ -19,6 +19,7 @@ def _filters(**overrides):
         "best_contact_method": None,
         "city": None,
         "country": None,
+        "business_ids": None,
         "verified_email": False,
         "has_mobile": False,
         "limit": 500,
@@ -74,6 +75,35 @@ async def test_enqueue_bulk_respects_schema_limit(monkeypatch: pytest.MonkeyPatc
         None, uuid.uuid4(), filters=_filters(limit=50), limit=500
     )
     assert captured["limit"] == 50
+
+
+async def test_enqueue_bulk_accepts_explicit_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    ids = [uuid.uuid4(), uuid.uuid4(), uuid.uuid4()]
+    enqueued: list[tuple] = []
+
+    class _Rows:
+        def scalars(self):
+            return ids[:2]
+
+    class _Session:
+        async def execute(self, _stmt):
+            return _Rows()
+
+    async def fake_enqueue(business_id, force=False):
+        enqueued.append((business_id, force))
+
+    monkeypatch.setattr(verification_service, "enqueue_verification", fake_enqueue)
+
+    queued = await verification_service.enqueue_bulk(
+        _Session(),
+        uuid.uuid4(),
+        filters=_filters(business_ids=ids),
+        force=False,
+        limit=2,
+    )
+
+    assert queued == 2
+    assert enqueued == [(ids[0], False), (ids[1], False)]
 
 
 def test_job_id_is_bucketed_by_minute(monkeypatch: pytest.MonkeyPatch) -> None:

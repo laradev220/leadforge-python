@@ -220,6 +220,60 @@ export interface Lead {
   provenance?: ProvenanceRow[];
 }
 
+export interface SearchJobProgress {
+  job_id: string;
+  status: SearchJobStatus;
+  keyword: string;
+  location: string;
+  total_discovered: number;
+  total_enriched: number;
+  percent: number;
+  stages: {
+    website: number;
+    contacts: number;
+    socials: number;
+    verified: number;
+    checked: number;
+    scored: number;
+  };
+}
+
+export interface EngineRun {
+  id: string;
+  business_id: string;
+  business_name: string | null;
+  worker: string;
+  status: "RUNNING" | "COMPLETED" | "FAILED";
+  started_at: string | null;
+  completed_at: string | null;
+  duration_ms: number | null;
+  error: string | null;
+  job_id: string | null;
+}
+
+export interface EngineActivity {
+  active: EngineRun[];
+  recent: EngineRun[];
+  queues: Record<string, number>;
+  counts: { active: number; waiting: number };
+}
+
+export interface VerificationCapabilities {
+  provider: string;
+  supports_valid: boolean;
+  supports_domain_checked: boolean;
+  max_age_days: number;
+}
+
+export interface Suppression {
+  id: string;
+  kind: "EMAIL" | "PHONE" | "DOMAIN";
+  value: string;
+  reason: string;
+  note: string | null;
+  created_at: string;
+}
+
 export interface DashboardStats {
   businesses: number;
   websitesFound: number;
