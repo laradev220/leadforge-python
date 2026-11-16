@@ -12,6 +12,7 @@ from leadforge_shared.types import (
     EnrichmentStatus,
     ExportFormat,
     PhoneLineType,
+    ScheduleCadence,
     SearchJobStatus,
     SocialPlatform,
     SuppressionKind,
@@ -86,6 +87,9 @@ class SearchJob(Base):
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("users.id"), nullable=False)
+    schedule_id: Mapped[uuid.UUID | None] = mapped_column(
+        _UUID, ForeignKey("search_schedules.id", ondelete="SET NULL"), nullable=True
+    )
     keyword: Mapped[str] = mapped_column(String(255), nullable=False)
     location: Mapped[str] = mapped_column(String(255), nullable=False)
     radius_km: Mapped[int | None] = mapped_column(Integer)
@@ -109,8 +113,49 @@ class SearchJob(Base):
 
     __table_args__ = (
         Index("ix_search_jobs_user_id", "user_id"),
+        Index("ix_search_jobs_schedule_id", "schedule_id"),
         Index("ix_search_jobs_status", "status"),
         Index("ix_search_jobs_created_at", "created_at"),
+    )
+
+
+class SearchSchedule(Base):
+    """Recurring search definition executed by the scheduler worker."""
+
+    __tablename__ = "search_schedules"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("users.id"), nullable=False)
+    keyword: Mapped[str] = mapped_column(String(255), nullable=False)
+    location: Mapped[str] = mapped_column(String(255), nullable=False)
+    country: Mapped[str | None] = mapped_column(String(2))
+    radius_km: Mapped[int | None] = mapped_column(Integer)
+    cadence: Mapped[ScheduleCadence] = mapped_column(
+        SAEnum(
+            ScheduleCadence,
+            name="schedule_cadence",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        default=ScheduleCadence.WEEKLY,
+        nullable=False,
+    )
+    hour: Mapped[int] = mapped_column(Integer, default=9, nullable=False)
+    minute: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    weekday: Mapped[int | None] = mapped_column(Integer)
+    day_of_month: Mapped[int | None] = mapped_column(Integer)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_job_id: Mapped[uuid.UUID | None] = mapped_column(_UUID)
+    created_at: Mapped[datetime] = _now()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_search_schedules_user_id", "user_id"),
+        Index("ix_search_schedules_due", "enabled", "next_run_at"),
     )
 
 

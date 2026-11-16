@@ -9,7 +9,10 @@ import type {
   ExportFilters,
   ExportFormat,
   ExportRecord,
+  ScheduleCadence,
+  ScheduleRun,
   SearchJobProgress,
+  SearchSchedule,
   Suppression,
   VerificationCapabilities,
   GradeDistribution,
@@ -126,6 +129,58 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  }
+
+  async listSchedules(): Promise<SingleResponse<SearchSchedule[]>> {
+    return this.request<SingleResponse<SearchSchedule[]>>(`/schedules`);
+  }
+
+  async createSchedule(payload: {
+    keyword: string;
+    location: string;
+    country?: string;
+    radius_km?: number;
+    cadence: ScheduleCadence;
+    hour: number;
+    minute: number;
+    weekday?: number;
+    day_of_month?: number;
+    timezone: string;
+    enabled?: boolean;
+  }): Promise<SingleResponse<SearchSchedule>> {
+    return this.request(`/schedules`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateSchedule(
+    id: string,
+    payload: Record<string, unknown>,
+  ): Promise<SingleResponse<SearchSchedule>> {
+    return this.request(`/schedules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteSchedule(id: string): Promise<SingleResponse<{ deleted: true }>> {
+    return this.request(`/schedules/${id}`, { method: "DELETE" });
+  }
+
+  async runScheduleNow(
+    id: string,
+  ): Promise<SingleResponse<{ job_id: string }>> {
+    return this.request(`/schedules/${id}/run`, { method: "POST" });
+  }
+
+  async listScheduleRuns(
+    id: string,
+    limit = 5,
+  ): Promise<SingleResponse<ScheduleRun[]>> {
+    return this.request<SingleResponse<ScheduleRun[]>>(
+      `/schedules/${id}/runs?limit=${limit}`,
+    );
   }
 
   async listSearchJobs(

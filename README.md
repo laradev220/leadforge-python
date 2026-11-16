@@ -300,6 +300,27 @@ VERIFY_MAX_AGE_DAYS=30
 - `verified_email=true` filters leads whose email passed mailbox-level checks.
 - Exports exclude suppressed contacts and (by default) unverified emails.
 
+## Scheduled searches
+
+Recurring searches are stored in `search_schedules` and dispatched by the
+scheduler process. Due rows are locked with `FOR UPDATE SKIP LOCKED`, so running
+multiple schedulers never double-runs a schedule.
+
+```bash
+# cadence: DAILY | WEEKLY | MONTHLY, evaluated in the schedule's timezone
+POST /api/v1/schedules
+{
+  "keyword": "Dentist", "location": "Peshawar", "country": "PK",
+  "cadence": "WEEKLY", "weekday": 0, "hour": 9, "minute": 0,
+  "timezone": "Asia/Karachi"
+}
+```
+
+- `POST /schedules/{id}/run` runs immediately without shifting the cadence.
+- `PATCH /schedules/{id}` toggles `enabled` or edits timing.
+- `GET /schedules/{id}/runs` lists the schedule's search jobs.
+- `SCHEDULE_POLL_SECONDS` controls how often the scheduler checks for due rows.
+
 ## Running Workers
 
 Each worker is a separate service that consumes from a specific Arq queue.
@@ -325,6 +346,9 @@ uv run --package scoring-worker python -m leadforge_scoring_worker
 
 # Export — generates export files (CSV, JSON, XLSX)
 uv run --package export-worker python -m leadforge_export_worker
+
+# Scheduler — dispatches due recurring searches (polling process, not an arq consumer)
+uv run --package scheduler-worker python -m leadforge_scheduler_worker
 ```
 
 **Pipeline Flow:**
@@ -544,6 +568,27 @@ VERIFY_MAX_AGE_DAYS=30
 - `POST /api/v1/businesses/verify` bulk-checks a filtered segment (max 500).
 - `verified_email=true` filters leads whose email passed mailbox-level checks.
 - Exports exclude suppressed contacts and (by default) unverified emails.
+
+## Scheduled searches
+
+Recurring searches are stored in `search_schedules` and dispatched by the
+scheduler process. Due rows are locked with `FOR UPDATE SKIP LOCKED`, so running
+multiple schedulers never double-runs a schedule.
+
+```bash
+# cadence: DAILY | WEEKLY | MONTHLY, evaluated in the schedule's timezone
+POST /api/v1/schedules
+{
+  "keyword": "Dentist", "location": "Peshawar", "country": "PK",
+  "cadence": "WEEKLY", "weekday": 0, "hour": 9, "minute": 0,
+  "timezone": "Asia/Karachi"
+}
+```
+
+- `POST /schedules/{id}/run` runs immediately without shifting the cadence.
+- `PATCH /schedules/{id}` toggles `enabled` or edits timing.
+- `GET /schedules/{id}/runs` lists the schedule's search jobs.
+- `SCHEDULE_POLL_SECONDS` controls how often the scheduler checks for due rows.
 
 ## Running Workers in Development
 

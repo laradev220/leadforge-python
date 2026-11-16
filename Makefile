@@ -55,11 +55,14 @@ run-scoring-worker:
 run-export-worker:
 	uv run python -m leadforge_export_worker
 
+run-scheduler-worker:
+	uv run python -m leadforge_scheduler_worker
+
 LOG_DIR := logs
 
 run-all-workers:
 	@mkdir -p $(LOG_DIR)
-	@echo "Starting all 7 workers — logs go to logs/<worker>.log"
+	@echo "Starting all 8 workers — logs go to logs/<worker>.log"
 	uv run python -m leadforge_discovery_worker > $(LOG_DIR)/discovery.log 2>&1 &
 	uv run python -m leadforge_website_worker   > $(LOG_DIR)/website.log 2>&1 &
 	uv run python -m leadforge_contact_worker   > $(LOG_DIR)/contact.log 2>&1 &
@@ -146,6 +149,7 @@ kill-all-workers:
 	-pkill -f "leadforge_verification_worker" 2>/dev/null || true
 	-pkill -f "leadforge_scoring_worker" 2>/dev/null || true
 	-pkill -f "leadforge_export_worker" 2>/dev/null || true
+	-pkill -f "leadforge_scheduler_worker" 2>/dev/null || true
 	@echo "✓ All workers stopped"
 
 clean:

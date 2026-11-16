@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     verify_timeout_ms: int = Field(default=10000, alias="VERIFY_TIMEOUT_MS")
     verify_max_age_days: int = Field(default=30, alias="VERIFY_MAX_AGE_DAYS")
     verify_smtp_helo_domain: str = Field(default="leadforge.dev", alias="VERIFY_SMTP_HELO_DOMAIN")
+    schedule_poll_seconds: int = Field(default=30, alias="SCHEDULE_POLL_SECONDS")
     zero_bounce_api_key: str = Field(default="", alias="ZEROBOUNCE_API_KEY")
 
     # Comma-separated list of source labels to enable.  When empty all

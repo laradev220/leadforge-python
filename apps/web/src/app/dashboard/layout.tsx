@@ -11,6 +11,7 @@ import { EngineDock } from "@/components/engine-dock";
 const NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/jobs", label: "Search jobs" },
+  { href: "/dashboard/schedules", label: "Schedules" },
   { href: "/dashboard/leads", label: "Leads" },
   { href: "/dashboard/businesses", label: "Businesses" },
   { href: "/dashboard/socials", label: "Socials" },

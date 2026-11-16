@@ -55,6 +55,12 @@ class PhoneLineType(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class ScheduleCadence(StrEnum):
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+
+
 class SuppressionKind(StrEnum):
     EMAIL = "EMAIL"
     PHONE = "PHONE"

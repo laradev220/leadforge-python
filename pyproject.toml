@@ -19,6 +19,7 @@ dependencies = [
     "verification-worker",
     "scoring-worker",
     "export-worker",
+    "scheduler-worker",
 ]
 
 [tool.uv.workspace]
@@ -31,6 +32,7 @@ members = [
     "workers/verification_worker",
     "workers/scoring_worker",
     "workers/export_worker",
+    "workers/scheduler_worker",
     "packages/config",
     "packages/shared",
     "packages/database",
@@ -66,6 +68,7 @@ social-worker = { workspace = true }
 verification-worker = { workspace = true }
 scoring-worker = { workspace = true }
 export-worker = { workspace = true }
+scheduler-worker = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

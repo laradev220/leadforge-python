@@ -23,6 +23,7 @@ from leadforge_api.routes import (
     exports,
     jobs,
     leads,
+    schedules,
     search_jobs,
     social_profiles,
     suppressions,
@@ -87,6 +88,7 @@ app.include_router(analytics.router, prefix=API_PREFIX)
 app.include_router(social_profiles.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(suppressions.router, prefix=API_PREFIX)
+app.include_router(schedules.router, prefix=API_PREFIX)
 app.include_router(jobs.router, prefix=API_PREFIX)
 app.include_router(verification.router, prefix=API_PREFIX)
 

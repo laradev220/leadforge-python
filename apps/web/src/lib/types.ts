@@ -220,6 +220,37 @@ export interface Lead {
   provenance?: ProvenanceRow[];
 }
 
+export type ScheduleCadence = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export interface SearchSchedule {
+  id: string;
+  keyword: string;
+  location: string;
+  country: string | null;
+  radius_km: number | null;
+  cadence: ScheduleCadence;
+  hour: number;
+  minute: number;
+  weekday: number | null;
+  day_of_month: number | null;
+  timezone: string;
+  enabled: boolean;
+  next_run_at: string;
+  last_run_at: string | null;
+  last_job_id: string | null;
+  created_at: string;
+}
+
+export interface ScheduleRun {
+  job_id: string;
+  status: SearchJobStatus;
+  keyword: string;
+  location: string;
+  total_discovered: number;
+  total_enriched: number;
+  created_at: string;
+}
+
 export interface SearchJobProgress {
   job_id: string;
   status: SearchJobStatus;

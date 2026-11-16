@@ -12,6 +12,7 @@ from leadforge_shared.types import (
     ExportFormat,
     LeadGrade,
     PhoneLineType,
+    ScheduleCadence,
     SearchJobStatus,
     SocialPlatform,
     SuppressionKind,
@@ -19,7 +20,14 @@ from leadforge_shared.types import (
     VerificationStatus,
     WebsiteStatus,
 )
-from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    model_validator,
+)
 
 # ---------- Auth ----------
 
@@ -255,6 +263,84 @@ class LeadResponse(BaseModel):
     social_profiles: list[SocialProfileResponse]
     website: WebsiteResponse | None
     provenance: list[ProvenanceResponse] = Field(default_factory=list)
+
+
+# ---------- Schedules ----------
+
+
+class ScheduleCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    keyword: str = Field(min_length=1, max_length=255)
+    location: str = Field(min_length=1, max_length=255)
+    country: str | None = Field(default=None, min_length=2, max_length=2)
+    radius_km: int | None = Field(default=None, gt=0)
+    cadence: ScheduleCadence
+    hour: int = Field(default=9, ge=0, le=23)
+    minute: int = Field(default=0, ge=0, le=59)
+    weekday: int | None = Field(default=None, ge=0, le=6)
+    day_of_month: int | None = Field(default=None, ge=1, le=28)
+    timezone: str = "UTC"
+    enabled: bool = True
+
+    @model_validator(mode="after")
+    def _validate(self):
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(self.timezone)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError("Unknown timezone") from exc
+        if self.cadence == ScheduleCadence.WEEKLY and self.weekday is None:
+            raise ValueError("weekday is required for weekly schedules")
+        return self
+
+
+class ScheduleUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    keyword: str | None = Field(default=None, min_length=1, max_length=255)
+    location: str | None = Field(default=None, min_length=1, max_length=255)
+    country: str | None = Field(default=None, min_length=2, max_length=2)
+    radius_km: int | None = Field(default=None, gt=0)
+    cadence: ScheduleCadence | None = None
+    hour: int | None = Field(default=None, ge=0, le=23)
+    minute: int | None = Field(default=None, ge=0, le=59)
+    weekday: int | None = Field(default=None, ge=0, le=6)
+    day_of_month: int | None = Field(default=None, ge=1, le=28)
+    timezone: str | None = None
+    enabled: bool | None = None
+
+
+class ScheduleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    keyword: str
+    location: str
+    country: str | None
+    radius_km: int | None
+    cadence: ScheduleCadence
+    hour: int
+    minute: int
+    weekday: int | None
+    day_of_month: int | None
+    timezone: str
+    enabled: bool
+    next_run_at: datetime
+    last_run_at: datetime | None
+    last_job_id: UUID | None
+    created_at: datetime
+
+
+class ScheduleRunResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    job_id: UUID
+    status: SearchJobStatus
+    keyword: str
+    location: str
+    total_discovered: int
+    total_enriched: int
+    created_at: datetime
 
 
 class SuppressionCreateRequest(BaseModel):
