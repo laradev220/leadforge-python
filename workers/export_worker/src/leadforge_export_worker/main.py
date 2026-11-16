@@ -12,15 +12,25 @@ from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import (
     Business,
+    Contact,
+    ContactType,
     Export,
     LeadScore,
     SearchJob,
     SearchJobBusiness,
+    Suppression,
 )
-from leadforge_shared.types import ExportFilters, ExportFormat, ExportJobData, ExportStatus
+from leadforge_shared.types import (
+    ExportFilters,
+    ExportFormat,
+    ExportJobData,
+    ExportStatus,
+    SuppressionKind,
+    VerificationStatus,
+)
 from leadforge_worker_core.core import WorkerWrapper
 from openpyxl import Workbook
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -38,6 +48,9 @@ COLUMNS: tuple[str, ...] = (
     "lead_score",
     "grade",
     "best_contact",
+    "email_status",
+    "email_verified_at",
+    "phone_type",
     "contacts",
     "socials",
 )
@@ -90,12 +103,64 @@ def _build_query(user_id: UUID, filters: ExportFilters):
         query = query.where(Business.country == filters.country)
     if filters.best_contact_method:
         query = query.where(LeadScore.best_contact_method == filters.best_contact_method.value)
+    if filters.verified_email_only:
+        query = query.where(
+            exists().where(
+                Contact.business_id == Business.id,
+                Contact.type == ContactType.EMAIL,
+                Contact.verification_status == VerificationStatus.VALID,
+            )
+        )
     return query
 
 
-def _build_rows(businesses: list[Business]) -> list[dict[str, Any]]:
+_EMAIL_PRIORITY = {
+    VerificationStatus.VALID: 5,
+    VerificationStatus.RISKY: 4,
+    VerificationStatus.CATCH_ALL: 3,
+    VerificationStatus.UNKNOWN: 2,
+    VerificationStatus.INVALID: 1,
+    VerificationStatus.UNVERIFIED: 0,
+}
+
+
+def _best_email(contacts: list[Contact]) -> Contact | None:
+    emails = [c for c in contacts if c.type == ContactType.EMAIL]
+    if not emails:
+        return None
+    return max(emails, key=lambda c: _EMAIL_PRIORITY.get(c.verification_status, 0))
+
+
+def _best_phone(contacts: list[Contact]) -> Contact | None:
+    phones = [c for c in contacts if c.type == ContactType.PHONE]
+    if not phones:
+        return None
+    return max(phones, key=lambda c: 1 if c.line_type and c.line_type.value == "MOBILE" else 0)
+
+
+def _suppressed(email: str, phone: str, sets: tuple[set[str], set[str], set[str]]) -> bool:
+    emails, phones, domains = sets
+    email = email.strip().lower()
+    if email and email in emails:
+        return True
+    if email and email.rsplit("@", 1)[-1] in domains:
+        return True
+    normalized_phone = phone.strip()
+    return bool(normalized_phone and normalized_phone in phones)
+
+
+def _build_rows(
+    businesses: list[Business],
+    suppressions: tuple[set[str], set[str], set[str]] = (set(), set(), set()),
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for b in businesses:
+        email = _best_email(b.contacts or [])
+        phone = _best_phone(b.contacts or [])
+        email_value = email.value if email else ""
+        phone_value = phone.value if phone else (b.phone or "")
+        if _suppressed(email_value, phone_value, suppressions):
+            continue
         rows.append(
             {
                 "id": str(b.id),
@@ -111,6 +176,11 @@ def _build_rows(businesses: list[Business]) -> list[dict[str, Any]]:
                 "lead_score": b.lead_score.score if b.lead_score else 0,
                 "grade": b.lead_score.grade if b.lead_score else "",
                 "best_contact": b.lead_score.best_contact_method if b.lead_score else "",
+                "email_status": email.verification_status.value if email else "",
+                "email_verified_at": (
+                    email.verified_at.isoformat() if email and email.verified_at else ""
+                ),
+                "phone_type": phone.line_type.value if phone and phone.line_type else "",
                 "contacts": "; ".join(f"{c.type.value}:{c.value}" for c in b.contacts),
                 "socials": "; ".join(
                     f"{p.platform.value}:{p.profile_url}" for p in b.social_profiles
@@ -182,7 +252,21 @@ async def export_processor(data: ExportJobData, logger):
         try:
             filters = await _load_filters(exp, data, logger)
             businesses = await _collect_businesses(session, exp.user_id, filters)
-            rows = _build_rows(businesses)
+            suppression_rows = list(
+                (
+                    await session.execute(
+                        select(Suppression).where(Suppression.user_id == exp.user_id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            suppressions = (
+                {r.value for r in suppression_rows if r.kind == SuppressionKind.EMAIL},
+                {r.value for r in suppression_rows if r.kind == SuppressionKind.PHONE},
+                {r.value for r in suppression_rows if r.kind == SuppressionKind.DOMAIN},
+            )
+            rows = _build_rows(businesses, suppressions)
 
             settings = get_settings()
             export_dir = Path(settings.export_dir)

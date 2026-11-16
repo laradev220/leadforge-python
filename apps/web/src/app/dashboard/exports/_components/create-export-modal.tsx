@@ -39,6 +39,12 @@ export function CreateExportModal({
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(true);
+  const [coverage, setCoverage] = useState<{
+    matched: number;
+    verified: number;
+    checked: number;
+  } | null>(null);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -49,6 +55,40 @@ export function CreateExportModal({
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  // Coverage preview (counts only; suppression is enforced server-side)
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const parsedMin = parseFloat(minScore);
+    const parsedMax = parseFloat(maxScore);
+    api
+      .listLeads({
+        limit: 1,
+        include_stats: true,
+        grade: (grade as LeadGrade) || undefined,
+        score_min: Number.isFinite(parsedMin) ? parsedMin : undefined,
+        score_max: Number.isFinite(parsedMax) ? parsedMax : undefined,
+        best_contact_method: bestContactMethod || undefined,
+        website_status: (websiteStatus as WebsiteStatus) || undefined,
+        city: city.trim() || undefined,
+        country: country.trim().toUpperCase() || undefined,
+      })
+      .then((res) => {
+        if (cancelled) return;
+        setCoverage({
+          matched: res.meta.total_count ?? res.meta.total,
+          verified: res.meta.verified_email_count ?? 0,
+          checked: res.meta.checked_email_count ?? 0,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setCoverage(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, grade, minScore, maxScore, bestContactMethod, websiteStatus, city, country]);
 
   // Close on escape
   useEffect(() => {
@@ -71,6 +111,8 @@ export function CreateExportModal({
     setWebsiteStatus("");
     setCity("");
     setCountry("");
+    setVerifiedOnly(true);
+    setCoverage(null);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -95,6 +137,7 @@ export function CreateExportModal({
       if (websiteStatus) filters.website_status = websiteStatus as WebsiteStatus;
       if (city.trim()) filters.city = city.trim();
       if (country.trim()) filters.country = country.trim().toUpperCase();
+      filters.verified_email_only = verifiedOnly;
 
       const payload: { format: ExportFormat; filters: ExportFilters } = {
         format,
@@ -231,6 +274,37 @@ export function CreateExportModal({
                 />
               </div>
             </div>
+          </fieldset>
+
+          <fieldset className="space-y-4 border-t border-line pt-6">
+            <legend className="block text-xs font-mono uppercase tracking-wider text-ink-mute mb-2">
+              Data quality
+            </legend>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="accent-ember mt-1"
+                checked={verifiedOnly}
+                onChange={(e) => setVerifiedOnly(e.target.checked)}
+              />
+              <span>
+                <span className="block text-sm font-medium">Only verified emails</span>
+                <span className="block text-xs text-ink-mute mt-0.5">
+                  Requires mailbox-level verification (SMTP or provider). MX-only
+                  results count as domain-checked, not verified.
+                </span>
+              </span>
+            </label>
+            <p className="text-xs text-ink-mute">
+              Suppressed and do-not-contact records are always excluded.
+            </p>
+            {coverage && (
+              <div className="border border-line bg-paper-mute/40 px-4 py-3 text-xs font-mono text-ink-mute grid grid-cols-3 gap-2">
+                <span><strong className="text-ink">{coverage.matched}</strong> matched</span>
+                <span><strong className="text-ink">{coverage.verified}</strong> verified</span>
+                <span><strong className="text-ink">{coverage.checked}</strong> domain-checked</span>
+              </div>
+            )}
           </fieldset>
 
           <div className="flex items-center justify-end gap-3 border-t border-line pt-6">

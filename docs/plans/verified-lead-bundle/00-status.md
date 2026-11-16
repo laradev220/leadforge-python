@@ -26,7 +26,11 @@
   - proof 2026-11-16: /leads?include_stats=true -> total 43, verified 0,
     domain-checked 1, mobile 5; has_mobile filter returns 5 leads with MOBILE;
     web typecheck clean (verification + phone badges, toggles, counts)
-- [ ] Slice 6 — verified-only suppression-safe exports + export UI coverage
+- [x] Slice 6 — verified-only suppression-safe exports + export UI coverage
+  - proof 2026-11-16: suppressed info@signaturesmile.com.pk -> export with
+    verified_email_only=false gave 42/43 rows (suppressed absent); default
+    verified-only gave 0 (no mailbox-verified emails under mx tier);
+    CSV headers include email_status, email_verified_at, phone_type
 - [ ] Slice 7 — detail proof panel, admin queue, env/Makefile/README polish
 
 ## Notes for a fresh session

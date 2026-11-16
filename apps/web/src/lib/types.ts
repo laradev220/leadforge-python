@@ -236,6 +236,7 @@ export interface ExportFilters {
   city?: string;
   country?: string;
   website_status?: WebsiteStatus;
+  verified_email_only?: boolean;
 }
 
 export interface ExportRecord {

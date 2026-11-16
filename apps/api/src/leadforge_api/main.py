@@ -24,6 +24,7 @@ from leadforge_api.routes import (
     leads,
     search_jobs,
     social_profiles,
+    suppressions,
 )
 from leadforge_api.routes.scrapers import router as scrapers_router
 
@@ -83,6 +84,7 @@ app.include_router(exports.router, prefix=API_PREFIX)
 app.include_router(analytics.router, prefix=API_PREFIX)
 app.include_router(social_profiles.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(suppressions.router, prefix=API_PREFIX)
 
 # Scraper health and metrics (no auth for /metrics)
 app.include_router(scrapers_router, prefix="/api/v1")

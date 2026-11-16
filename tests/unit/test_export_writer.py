@@ -27,6 +27,9 @@ ROWS = [
         "lead_score": 88,
         "grade": "B",
         "best_contact": "EMAIL",
+        "email_status": "VALID",
+        "email_verified_at": "2026-11-16T10:00:00+00:00",
+        "phone_type": "MOBILE",
         "contacts": "EMAIL:a@acme.test",
         "socials": "FACEBOOK:https://facebook.com/acme",
     }
@@ -51,7 +54,8 @@ class TestExportWriters:
         _write_csv(path, [])
         assert path.read_text().strip() == (
             "id,name,category,city,country,phone,rating,review_count,website_status,"
-            "website_url,lead_score,grade,best_contact,contacts,socials"
+            "website_url,lead_score,grade,best_contact,email_status,"
+            "email_verified_at,phone_type,contacts,socials"
         )
 
     def test_json_round_trip(self, tmp_path: Path) -> None:
@@ -71,8 +75,16 @@ class TestExportWriters:
 
 class TestExportQuery:
     def test_scoped_to_user(self) -> None:
-        sql = _sql(ExportFilters())
+        sql = _sql(ExportFilters(verified_email_only=False))
         assert "search_jobs.user_id" in sql
+
+    def test_verified_filter_defaults_on(self) -> None:
+        sql = _sql(ExportFilters())
+        assert "verification_status" in sql
+
+    def test_verified_filter_can_be_disabled(self) -> None:
+        sql = _sql(ExportFilters(verified_email_only=False))
+        assert "verification_status" not in sql
 
     def test_score_filters_applied(self) -> None:
         sql = _sql(ExportFilters(score_min=30, score_max=80))
@@ -88,3 +100,70 @@ class TestExportQuery:
         sql = _sql(ExportFilters(city="London", grade="A"))
         assert "businesses.city ILIKE" in sql
         assert "lead_scores.grade" in sql
+
+
+class TestSuppressionRows:
+    def _business(self):
+        from types import SimpleNamespace
+
+        from leadforge_shared.types import (
+            ContactType,
+            PhoneLineType,
+            VerificationStatus,
+            WebsiteStatus,
+        )
+
+        contact = SimpleNamespace(
+            type=ContactType.EMAIL,
+            value="info@clinic.pk",
+            verification_status=VerificationStatus.RISKY,
+            verified_at=None,
+            line_type=None,
+        )
+        phone = SimpleNamespace(
+            type=ContactType.PHONE,
+            value="+923329307688",
+            verification_status=VerificationStatus.VALID,
+            verified_at=None,
+            line_type=PhoneLineType.MOBILE,
+        )
+        return SimpleNamespace(
+            id="b1",
+            name="Clinic",
+            category="Dentist",
+            city="Peshawar",
+            country="PK",
+            phone="+923329307688",
+            rating=4.5,
+            review_count=3,
+            website_status=WebsiteStatus.FOUND,
+            website=None,
+            lead_score=SimpleNamespace(score=70, grade="C", best_contact_method="EMAIL"),
+            contacts=[contact, phone],
+            social_profiles=[],
+        )
+
+    def test_verification_columns_populated(self) -> None:
+        from leadforge_export_worker.main import _build_rows
+
+        row = _build_rows([self._business()])[0]
+        assert row["email_status"] == "RISKY"
+        assert row["phone_type"] == "MOBILE"
+
+    def test_suppressed_email_skips_business(self) -> None:
+        from leadforge_export_worker.main import _build_rows
+
+        rows = _build_rows([self._business()], ({"info@clinic.pk"}, set(), set()))
+        assert rows == []
+
+    def test_suppressed_domain_skips_business(self) -> None:
+        from leadforge_export_worker.main import _build_rows
+
+        rows = _build_rows([self._business()], (set(), set(), {"clinic.pk"}))
+        assert rows == []
+
+    def test_suppressed_phone_skips_business(self) -> None:
+        from leadforge_export_worker.main import _build_rows
+
+        rows = _build_rows([self._business()], (set(), {"+923329307688"}, set()))
+        assert rows == []

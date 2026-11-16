@@ -177,6 +177,7 @@ class ExportFilters(BaseModel):
     city: str | None = None
     country: str | None = None
     website_status: WebsiteStatus | None = None
+    verified_email_only: bool = True
 
     @model_validator(mode="after")
     def _check_score_range(self) -> ExportFilters:

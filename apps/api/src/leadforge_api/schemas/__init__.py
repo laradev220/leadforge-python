@@ -14,6 +14,7 @@ from leadforge_shared.types import (
     PhoneLineType,
     SearchJobStatus,
     SocialPlatform,
+    SuppressionKind,
     UserRole,
     VerificationStatus,
     WebsiteStatus,
@@ -254,6 +255,24 @@ class LeadResponse(BaseModel):
     social_profiles: list[SocialProfileResponse]
     website: WebsiteResponse | None
     provenance: list[ProvenanceResponse] = Field(default_factory=list)
+
+
+class SuppressionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: SuppressionKind
+    value: str = Field(min_length=1)
+    reason: str = Field(default="manual", max_length=64)
+    note: str | None = None
+
+
+class SuppressionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    kind: SuppressionKind
+    value: str
+    reason: str
+    note: str | None
+    created_at: datetime
 
 
 # ---------- Verification ----------
