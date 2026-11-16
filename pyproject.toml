@@ -10,6 +10,7 @@ dependencies = [
     "leadforge-database",
     "leadforge-worker-core",
     "leadforge-scraper-core",
+    "leadforge-verification",
     "api",
     "discovery-worker",
     "website-worker",
@@ -35,6 +36,7 @@ members = [
     "packages/database",
     "packages/worker_core",
     "packages/scraper_core",
+    "packages/verification_core",
 ]
 
 [tool.uv]
@@ -55,6 +57,7 @@ leadforge-shared = { workspace = true }
 leadforge-database = { workspace = true }
 leadforge-worker-core = { workspace = true }
 leadforge-scraper-core = { workspace = true }
+leadforge-verification = { workspace = true }
 api = { workspace = true }
 discovery-worker = { workspace = true }
 website-worker = { workspace = true }

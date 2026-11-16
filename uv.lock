@@ -13,6 +13,7 @@ members = [
     "leadforge-database",
     "leadforge-scraper-core",
     "leadforge-shared",
+    "leadforge-verification",
     "leadforge-worker-core",
     "scoring-worker",
     "social-worker",
@@ -521,6 +522,7 @@ dependencies = [
     { name = "leadforge-database" },
     { name = "leadforge-scraper-core" },
     { name = "leadforge-shared" },
+    { name = "leadforge-verification" },
     { name = "leadforge-worker-core" },
     { name = "scoring-worker" },
     { name = "social-worker" },
@@ -550,6 +552,7 @@ requires-dist = [
     { name = "leadforge-database", editable = "packages/database" },
     { name = "leadforge-scraper-core", editable = "packages/scraper_core" },
     { name = "leadforge-shared", editable = "packages/shared" },
+    { name = "leadforge-verification", editable = "packages/verification_core" },
     { name = "leadforge-worker-core", editable = "packages/worker_core" },
     { name = "scoring-worker", editable = "workers/scoring_worker" },
     { name = "social-worker", editable = "workers/social_worker" },
@@ -672,6 +675,25 @@ dependencies = [
 requires-dist = [
     { name = "phonenumbers", specifier = ">=8.13" },
     { name = "pydantic", specifier = ">=2.8" },
+]
+
+[[package]]
+name = "leadforge-verification"
+version = "1.0.0"
+source = { editable = "packages/verification_core" }
+dependencies = [
+    { name = "dnspython" },
+    { name = "leadforge-config" },
+    { name = "leadforge-shared" },
+    { name = "phonenumbers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dnspython", specifier = ">=2.6" },
+    { name = "leadforge-config", editable = "packages/config" },
+    { name = "leadforge-shared", editable = "packages/shared" },
+    { name = "phonenumbers", specifier = ">=8.13" },
 ]
 
 [[package]]
@@ -1344,6 +1366,7 @@ dependencies = [
     { name = "leadforge-config" },
     { name = "leadforge-database" },
     { name = "leadforge-shared" },
+    { name = "leadforge-verification" },
     { name = "leadforge-worker-core" },
 ]
 
@@ -1353,6 +1376,7 @@ requires-dist = [
     { name = "leadforge-config", editable = "packages/config" },
     { name = "leadforge-database", editable = "packages/database" },
     { name = "leadforge-shared", editable = "packages/shared" },
+    { name = "leadforge-verification", editable = "packages/verification_core" },
     { name = "leadforge-worker-core", editable = "packages/worker_core" },
 ]
 

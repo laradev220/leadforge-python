@@ -67,6 +67,10 @@ class Settings(BaseSettings):
 
     export_dir: str = Field(default="./exports", alias="EXPORT_DIR")
 
+    email_verifier_provider: str = Field(default="mx", alias="EMAIL_VERIFIER_PROVIDER")
+    verify_timeout_ms: int = Field(default=10000, alias="VERIFY_TIMEOUT_MS")
+    verify_max_age_days: int = Field(default=30, alias="VERIFY_MAX_AGE_DAYS")
+
     # Comma-separated list of source labels to enable.  When empty all
     # sources registered in the source registry are used.
     # Format per country: ``PK=yellow_pages_pk,hotfrog_pk;US=yelp"

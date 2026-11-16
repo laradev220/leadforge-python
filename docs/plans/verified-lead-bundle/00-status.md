@@ -10,7 +10,10 @@
   - proof 2026-11-16: POST /businesses/{id}/verify -> 202; verification.log job_completed;
     contacts.verification_status=UNKNOWN (method=stub); scoring job followed;
     admin/queues shows verification complete=1
-- [ ] Slice 2 — real MX email verification + phone line typing
+- [x] Slice 2 — real MX email verification + phone line typing
+  - proof 2026-11-16: info@signaturesmile.com.pk -> RISKY (mx_present, 60);
+    contact@dentalsquarefamily.com -> INVALID (mx_missing, domain genuinely has no MX);
+    +923139252147 -> VALID/MOBILE (phone_lib, 80); scoring followed each run
 - [ ] Slice 3 — bulk verify, force refresh, 30-day freshness skip
 - [ ] Slice 4 — provenance writes in all stages + provenance API/response
 - [ ] Slice 5 — verified/mobile lead filters + list UI badges

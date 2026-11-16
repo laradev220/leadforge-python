@@ -8,6 +8,7 @@ dependencies = [
     "leadforge-config",
     "leadforge-database",
     "leadforge-shared",
+    "leadforge-verification",
     "leadforge-worker-core",
 ]
 
