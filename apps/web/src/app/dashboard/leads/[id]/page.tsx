@@ -10,6 +10,8 @@ import {
   Loader2,
   Mail,
   Phone,
+  RefreshCw,
+  ShieldCheck,
   Star,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -26,6 +28,7 @@ import {
 } from "@/lib/format";
 import { formatRelative } from "@/lib/utils";
 import { ScoreBreakdown } from "@/components/score-breakdown";
+import { VerificationBadge } from "@/components/verification-badge";
 
 export default function LeadDetailPage() {
   const params = useParams<{ id: string }>();
@@ -35,6 +38,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (!isValidUuid(id)) {
@@ -87,7 +91,35 @@ export default function LeadDetailPage() {
     );
   }
 
-  const { business, lead_score, contacts, social_profiles, website } = lead;
+  const {
+    business,
+    lead_score,
+    contacts,
+    social_profiles,
+    website,
+    provenance = [],
+  } = lead;
+  const verifiable = contacts.filter(
+    (c) => c.type === "EMAIL" || c.type === "PHONE",
+  );
+
+  async function reVerify() {
+    setVerifying(true);
+    try {
+      await api.verifyBusiness(business.id, true);
+      toast.success("Verification queued");
+      setTimeout(() => {
+        api
+          .getLead(business.id)
+          .then((res) => setLead(res.data))
+          .catch(() => undefined);
+      }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setVerifying(false);
+    }
+  }
   const topContacts = [...contacts]
     .sort((a, b) => b.confidence_score - a.confidence_score)
     .slice(0, 3);
@@ -283,6 +315,108 @@ export default function LeadDetailPage() {
           )}
         </Block>
       </section>
+
+      <section className="border-t border-line pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <SectionHeading
+            label="Contact verification"
+            meta="MX, mailbox and phone-line checks"
+          />
+          <button
+            type="button"
+            onClick={reVerify}
+            disabled={verifying}
+            className="btn-outline inline-flex items-center gap-2"
+          >
+            {verifying ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            Re-verify
+          </button>
+        </div>
+        {verifiable.length === 0 ? (
+          <Empty>No email or phone contacts to verify</Empty>
+        ) : (
+          <ul className="divide-y divide-line border-y border-line">
+            {verifiable.map((c) => {
+              const v = c.verification;
+              const checkedAt = v?.checked_at ? new Date(v.checked_at) : null;
+              const stale =
+                checkedAt !== null &&
+                Date.now() - checkedAt.getTime() > 30 * 24 * 60 * 60 * 1000;
+              return (
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center gap-3 py-3"
+                >
+                  <ShieldCheck size={14} className="text-ink-ghost" />
+                  <span className="font-mono text-sm break-all">{c.value}</span>
+                  <VerificationBadge verification={v} />
+                  {v?.line_type && (
+                    <span className="chip">{v.line_type.toLowerCase()}</span>
+                  )}
+                  {stale && <span className="chip text-amber-700">stale</span>}
+                  <span className="ml-auto text-xs text-ink-ghost font-mono">
+                    {v?.reason ?? "not checked"}
+                    {v?.checked_at ? ` · ${formatRelative(v.checked_at)}` : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="text-xs text-ink-mute mt-3">
+          MX-only results are domain-checked; a configured SMTP/provider verifier
+          upgrades them to mailbox-verified.
+        </p>
+      </section>
+
+      {provenance.length > 0 && (
+        <section>
+          <SectionHeading
+            label="Where this came from"
+            meta={`${provenance.length} recorded fields`}
+          />
+          <div className="overflow-x-auto border-y border-line">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] font-mono uppercase tracking-wider text-ink-mute">
+                  <th className="py-2 pr-3">Field</th>
+                  <th className="py-2 pr-3">Value</th>
+                  <th className="py-2 pr-3">Source</th>
+                  <th className="py-2 pr-3">First seen</th>
+                  <th className="py-2 pr-3">Last checked</th>
+                  <th className="py-2">Conf.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/70">
+                {provenance.slice(0, 20).map((row) => (
+                  <tr key={`${row.field}-${row.value}`}>
+                    <td className="py-2 pr-3 font-mono text-xs text-ink-mute">
+                      {row.field}
+                    </td>
+                    <td className="py-2 pr-3 max-w-[28ch] truncate" title={row.value}>
+                      {row.value}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="chip">{row.source}</span>
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-ink-mute">
+                      {formatRelative(row.first_seen_at)}
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-ink-mute">
+                      {formatRelative(row.last_checked_at)}
+                    </td>
+                    <td className="py-2 text-xs font-mono">{row.confidence}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="border-t border-line pt-6">
         <Block label="Address">

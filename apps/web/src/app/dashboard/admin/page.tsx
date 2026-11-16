@@ -37,6 +37,10 @@ const QUEUE_LABELS: Record<string, { label: string; description: string }> = {
     label: "Social",
     description: "Surfaces LinkedIn, Instagram, and other profiles.",
   },
+  verification: {
+    label: "Verification",
+    description: "Checks email deliverability and phone line types.",
+  },
   scoring: {
     label: "Scoring",
     description: "Calculates the 5-factor lead score.",
@@ -47,7 +51,15 @@ const QUEUE_LABELS: Record<string, { label: string; description: string }> = {
   },
 };
 
-const QUEUE_ORDER = ["discovery", "website", "contact", "social", "scoring", "export"];
+const QUEUE_ORDER = [
+  "discovery",
+  "website",
+  "contact",
+  "social",
+  "verification",
+  "scoring",
+  "export",
+];
 
 export default function AdminPage() {
   const { user } = useAuth();

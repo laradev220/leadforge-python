@@ -278,6 +278,28 @@ This approach reliably captures phone numbers and websites from Google Maps with
 
 ---
 
+## Verification
+
+Every lead can be checked before export. Verification is queue-driven and
+records per-field provenance (source, first seen, last checked).
+
+```bash
+# Default: MX/domain check (works offline; reported as "domain-checked")
+EMAIL_VERIFIER_PROVIDER=mx
+VERIFY_TIMEOUT_MS=10000
+VERIFY_MAX_AGE_DAYS=30
+
+# Mailbox-level checks (requires outbound port 25 or a provider key)
+# EMAIL_VERIFIER_PROVIDER=smtp
+# EMAIL_VERIFIER_PROVIDER=zerobounce
+# ZEROBOUNCE_API_KEY=...
+```
+
+- `POST /api/v1/businesses/{id}/verify?force=true` re-checks one lead.
+- `POST /api/v1/businesses/verify` bulk-checks a filtered segment (max 500).
+- `verified_email=true` filters leads whose email passed mailbox-level checks.
+- Exports exclude suppressed contacts and (by default) unverified emails.
+
 ## Running Workers
 
 Each worker is a separate service that consumes from a specific Arq queue.
@@ -294,6 +316,9 @@ uv run --package contact-worker python -m leadforge_contact_worker
 
 # Social — discovers and analyzes social profiles
 uv run --package social-worker python -m leadforge_social_worker
+
+# Verification — checks email deliverability and phone line types
+uv run --package verification-worker python -m leadforge_verification_worker
 
 # Scoring — scores leads based on enrichment data
 uv run --package scoring-worker python -m leadforge_scoring_worker
@@ -316,6 +341,9 @@ Website Worker ──► Website record
     ├────► Contact Worker ──► Contact records
     │
     └────► Social Worker ──► SocialProfile records
+    │
+    ▼
+Verification Worker ──► verification status + provenance
     │
     ▼
 Scoring Worker ──► LeadScore record
@@ -495,7 +523,29 @@ mkdir -p packages/my_package/src/leadforge_my_package
 uv sync
 ```
 
-### Running Workers in Development
+### Verification
+
+Every lead can be checked before export. Verification is queue-driven and
+records per-field provenance (source, first seen, last checked).
+
+```bash
+# Default: MX/domain check (works offline; reported as "domain-checked")
+EMAIL_VERIFIER_PROVIDER=mx
+VERIFY_TIMEOUT_MS=10000
+VERIFY_MAX_AGE_DAYS=30
+
+# Mailbox-level checks (requires outbound port 25 or a provider key)
+# EMAIL_VERIFIER_PROVIDER=smtp
+# EMAIL_VERIFIER_PROVIDER=zerobounce
+# ZEROBOUNCE_API_KEY=...
+```
+
+- `POST /api/v1/businesses/{id}/verify?force=true` re-checks one lead.
+- `POST /api/v1/businesses/verify` bulk-checks a filtered segment (max 500).
+- `verified_email=true` filters leads whose email passed mailbox-level checks.
+- Exports exclude suppressed contacts and (by default) unverified emails.
+
+## Running Workers in Development
 
 For local development with all workers:
 

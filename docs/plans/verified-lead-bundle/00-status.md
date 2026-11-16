@@ -31,7 +31,10 @@
     verified_email_only=false gave 42/43 rows (suppressed absent); default
     verified-only gave 0 (no mailbox-verified emails under mx tier);
     CSV headers include email_status, email_verified_at, phone_type
-- [ ] Slice 7 — detail proof panel, admin queue, env/Makefile/README polish
+- [x] Slice 7 — detail proof panel, admin queue, env/Makefile/README polish
+  - proof 2026-11-16: lead detail shows re-verify + verification badges + 17-row
+    provenance table; admin queue labels include verification; README documents
+    provider/env/commands; web typecheck clean; workers + API + web running
 
 ## Notes for a fresh session
 - Program: make LeadForge standout for **local-business outbound** (agencies and

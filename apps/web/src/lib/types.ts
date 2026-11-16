@@ -201,12 +201,23 @@ export interface LeadScore {
   calculated_at: string;
 }
 
+export interface ProvenanceRow {
+  field: string;
+  value: string;
+  source: string;
+  source_url: string | null;
+  confidence: number;
+  first_seen_at: string;
+  last_checked_at: string;
+}
+
 export interface Lead {
   business: Business;
   lead_score: LeadScore | null;
   contacts: Contact[];
   social_profiles: SocialProfile[];
   website: Website | null;
+  provenance?: ProvenanceRow[];
 }
 
 export interface DashboardStats {

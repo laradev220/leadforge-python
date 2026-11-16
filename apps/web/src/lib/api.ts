@@ -175,6 +175,15 @@ class ApiClient {
     return this.request<SingleResponse<Business>>(`/businesses/${id}`);
   }
 
+  async verifyBusiness(
+    id: string,
+    force = false,
+  ): Promise<SingleResponse<{ queued: true }>> {
+    return this.request(`/businesses/${id}/verify${force ? "?force=true" : ""}`, {
+      method: "POST",
+    });
+  }
+
   async reEnrichBusiness(id: string): Promise<SingleResponse<{ reEnriched: true }>> {
     return this.request(`/businesses/${id}/re-enrich`, { method: "POST" });
   }
