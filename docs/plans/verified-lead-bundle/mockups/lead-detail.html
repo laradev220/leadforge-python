@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Lead detail — verified contact proof</title>
+<style>
+  :root {
+    --paper: #f6f1e8; --ink: #17130f; --muted: #7a6f63; --line: #d9d0c3;
+    --ember: #b4431e; --green: #2f6b45; --amber: #9a6a12; --card: #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--ember); text-decoration: none; }
+  .top { display: flex; align-items: center; gap: 24px; padding: 14px 32px;
+         border-bottom: 1px solid var(--line); background: var(--card); }
+  .brand { font: 600 18px Georgia, serif; letter-spacing: -0.02em; }
+  .top nav { display: flex; gap: 18px; color: var(--muted); font-size: 13px; }
+  .top nav .on { color: var(--ink); font-weight: 600; }
+  .top .spacer { flex: 1; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper);
+            display: grid; place-items: center; font-size: 11px; }
+  main { max-width: 1180px; margin: 28px auto 80px; padding: 0 32px; }
+  .crumb { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  .head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px; margin: 10px 0 26px; }
+  h1 { font: 600 34px/1.15 Georgia, serif; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin-top: 6px; }
+  .badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+          padding: 3px 10px; font-size: 12px; color: var(--muted); }
+  .chip.ok { border-color: #bcd6c6; background: #eef5f0; color: var(--green); font-weight: 600; }
+  .chip.warn { border-color: #ead3a8; background: #fbf4e4; color: var(--amber); font-weight: 600; }
+  .score { margin-left: auto; text-align: right; }
+  .score .n { font: 600 40px/1 Georgia, serif; }
+  .score .g { color: var(--muted); font-size: 12px; letter-spacing: .1em; }
+  .grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+  .card h2 { font: 600 15px Georgia, serif; margin: 0; padding: 14px 18px;
+             border-bottom: 1px solid var(--line); }
+  .card .body { padding: 16px 18px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px dashed var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .label { width: 76px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .row .value { font-weight: 600; }
+  .row .meta { color: var(--muted); font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .dot.amber { background: var(--amber); }
+  .dot.grey { background: #b9afa3; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px;
+       text-transform: uppercase; letter-spacing: .07em; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 8px; border-bottom: 1px solid #eee7db; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .src { font-size: 11px; background: #f0eade; border-radius: 4px; padding: 2px 6px; color: #5d5347; }
+  .btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+         border-radius: 4px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .bar { height: 6px; background: #ece5d8; border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--ember); }
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li { position: relative; padding: 0 0 18px 22px; border-left: 1px solid var(--line); margin-left: 5px; }
+  .timeline li:last-child { padding-bottom: 0; }
+  .timeline li::before { content: ""; position: absolute; left: -5px; top: 3px; width: 9px; height: 9px;
+                         border-radius: 50%; background: var(--green); }
+  .timeline li.pending::before { background: #c9bfb1; }
+  .timeline .t { font-weight: 600; }
+  .timeline .when { color: var(--muted); font-size: 12px; }
+  .note { background: #fbf4e4; border: 1px solid #ead3a8; color: #6b4c0e;
+          border-radius: 6px; padding: 10px 12px; font-size: 12px; margin-top: 14px; }
+  .sidebar .card + .card { margin-top: 18px; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">LeadForge</div>
+  <nav><span>Leads</span><span>Search jobs</span><span>Exports</span><span>Sources</span></nav>
+  <div class="spacer"></div>
+  <div class="avatar">JC</div>
+</div>
+
+<main>
+  <div class="crumb">Leads / Bright Smile Clinic</div>
+  <div class="head">
+    <div>
+      <h1>Bright Smile Clinic</h1>
+      <div class="sub">Dentist · Peshawar, Pakistan · <a href="#">brightsmilesclinic.org</a></div>
+      <div class="badges">
+        <span class="chip ok">● Verified email</span>
+        <span class="chip ok">● Mobile number</span>
+        <span class="chip">3 social profiles</span>
+        <span class="chip">Website: reachable</span>
+        <span class="chip">Not suppressed</span>
+      </div>
+    </div>
+    <div class="score">
+      <div class="n">84</div>
+      <div class="g">GRADE B · BEST CHANNEL: EMAIL</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <section class="card">
+        <h2>Contact verification</h2>
+        <div class="body">
+          <div class="row">
+            <span class="label">Email</span>
+            <div style="flex:1">
+              <div class="value">sumaya@brightsmilesclinic.org</div>
+              <div class="meta">MX record found · SMTP accepted · provider check clean · checked 2 days ago</div>
+            </div>
+            <span class="chip ok">Verified · 94</span>
+          </div>
+          <div class="row">
+            <span class="label">Phone</span>
+            <div style="flex:1">
+              <div class="value">+92 332 9307688</div>
+              <div class="meta">Valid E.164 · line type: mobile · carrier: Jazz · checked 1 day ago</div>
+            </div>
+            <span class="chip ok">Mobile</span>
+          </div>
+          <div class="row">
+            <span class="label">WhatsApp</span>
+            <div style="flex:1">
+              <div class="value">wa.me/923329307688</div>
+              <div class="meta">Found on website contact page</div>
+            </div>
+            <span class="chip">Reachable</span>
+          </div>
+          <div class="row">
+            <span class="label">Socials</span>
+            <div style="flex:1;display:flex;gap:8px;flex-wrap:wrap">
+              <span class="chip">Facebook</span>
+              <span class="chip">Instagram · 259 followers</span>
+              <span class="chip">TikTok</span>
+            </div>
+            <span class="chip ok">3 found</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:18px">
+        <h2>Provenance — where every field came from</h2>
+        <div class="body" style="padding:4px 12px 10px">
+          <table>
+            <thead>
+              <tr><th>Field</th><th>Value</th><th>Source</th><th>First seen</th><th>Last checked</th><th>Confidence</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Email</td><td>sumaya@brightsmilesclinic.org</td>
+                <td><span class="src">website /contact</span></td>
+                <td>Nov 14</td><td>Nov 15</td>
+                <td><div class="bar"><i style="width:94%"></i></div><span class="meta">94</span></td>
+              </tr>
+              <tr>
+                <td>Phone</td><td>+92 332 9307688</td>
+                <td><span class="src">google maps</span></td>
+                <td>Nov 14</td><td>Nov 15</td>
+                <td><div class="bar"><i style="width:88%"></i></div><span class="meta">88</span></td>
+              </tr>
+              <tr>
+                <td>Website</td><td>brightsmilesclinic.org</td>
+                <td><span class="src">manual attach</span></td>
+                <td>Nov 14</td><td>Nov 15</td>
+                <td><div class="bar"><i style="width:100%"></i></div><span class="meta">100</span></td>
+              </tr>
+              <tr>
+                <td>Instagram</td><td>@brightsmilesclinic</td>
+                <td><span class="src">website footer</span></td>
+                <td>Nov 15</td><td>Nov 15</td>
+                <td><div class="bar"><i style="width:76%"></i></div><span class="meta">76</span></td>
+              </tr>
+              <tr>
+                <td>Category</td><td>Dentist</td>
+                <td><span class="src">google maps</span></td>
+                <td>Nov 14</td><td>Nov 15</td>
+                <td><div class="bar"><i style="width:91%"></i></div><span class="meta">91</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:18px">
+        <h2>Why this score</h2>
+        <div class="body">
+          <div class="row"><span class="label">Website</span><div style="flex:1"><div class="bar"><i style="width:80%"></i></div></div><span class="meta">40 pts — site missing booking &amp; mobile issues</span></div>
+          <div class="row"><span class="label">Contact</span><div style="flex:1"><div class="bar"><i style="width:52%"></i></div></div><span class="meta">18 pts — verified email + mobile</span></div>
+          <div class="row"><span class="label">Activity</span><div style="flex:1"><div class="bar"><i style="width:65%"></i></div></div><span class="meta">13 pts — posted 6 days ago</span></div>
+          <div class="row"><span class="label">Reviews</span><div style="flex:1"><div class="bar"><i style="width:46%"></i></div></div><span class="meta">8 pts — 42 reviews, 4.6 rating</span></div>
+          <div class="row"><span class="label">Validation</span><div style="flex:1"><div class="bar"><i style="width:50%"></i></div></div><span class="meta">5 pts</span></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="sidebar">
+      <section class="card">
+        <h2>Enrichment timeline</h2>
+        <div class="body">
+          <ul class="timeline">
+            <li><div class="t">Discovered</div><div class="when">Google Maps · Nov 14, 09:12</div></li>
+            <li><div class="t">Website found</div><div class="when">Reachable · Nov 14, 09:13</div></li>
+            <li><div class="t">Contacts extracted</div><div class="when">1 email · 1 phone · 1 form · Nov 14, 09:15</div></li>
+            <li><div class="t">Social profiles</div><div class="when">3 found · Nov 14, 09:16</div></li>
+            <li><div class="t">Email verified</div><div class="when">MX + SMTP · score 94 · Nov 15, 10:02</div></li>
+            <li><div class="t">Phone typed</div><div class="when">mobile · Nov 15, 10:02</div></li>
+            <li><div class="t">Scored</div><div class="when">84 · grade B · Nov 15, 10:03</div></li>
+          </ul>
+          <div class="actions">
+            <button class="btn">Re-verify</button>
+            <button class="btn ghost">Re-run enrichment</button>
+          </div>
+          <div class="note">Re-verification is free and unlimited. Verification results are reused for 30 days unless you force a refresh.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Handoff</h2>
+        <div class="body">
+          <div class="row"><span class="label">Status</span><div class="value">Qualified</div></div>
+          <div class="row"><span class="label">Owner</span><div class="value">Jane Cooper</div></div>
+          <div class="row"><span class="label">Tags</span><div class="value"><span class="chip">dentist</span> <span class="chip">no-booking</span></div></div>
+          <div class="actions">
+            <button class="btn" disabled>Send to HubSpot</button>
+            <button class="btn ghost">Add note</button>
+          </div>
+          <div class="meta" style="margin-top:10px">CRM push arrives in a later feature.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

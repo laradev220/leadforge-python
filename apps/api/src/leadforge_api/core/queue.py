@@ -7,6 +7,7 @@ from uuid import UUID
 
 from arq.connections import ArqRedis, RedisSettings, create_pool
 from leadforge_config import get_settings
+from leadforge_worker_core.core import verification_job_id
 
 _pool: ArqRedis | None = None
 
@@ -57,6 +58,17 @@ async def enqueue_social(business_id: UUID, website_url: str) -> None:
 
 async def enqueue_scoring(business_id: UUID) -> None:
     await enqueue("scoring", "scoring", {"business_id": str(business_id)})
+
+
+async def enqueue_verification(business_id: UUID, force: bool = False) -> None:
+    pool = await get_pool()
+    await pool.enqueue_job(
+        "verification",
+        _queue_name="verification",
+        _job_id=verification_job_id(str(business_id)),
+        business_id=str(business_id),
+        force=force,
+    )
 
 
 async def enqueue_export(export_id: UUID, filters: dict | None = None) -> None:

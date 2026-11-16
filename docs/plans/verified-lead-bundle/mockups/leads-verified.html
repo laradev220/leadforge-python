@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Leads — verified only</title>
+<style>
+  :root {
+    --paper: #f6f1e8; --ink: #17130f; --muted: #7a6f63; --line: #d9d0c3;
+    --ember: #b4431e; --green: #2f6b45; --card: #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; }
+  .top { display: flex; align-items: center; gap: 24px; padding: 14px 32px;
+         border-bottom: 1px solid var(--line); background: var(--card); }
+  .brand { font: 600 18px Georgia, serif; }
+  .top nav { display: flex; gap: 18px; color: var(--muted); font-size: 13px; }
+  .top nav .on { color: var(--ink); font-weight: 600; }
+  .spacer { flex: 1; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper);
+            display: grid; place-items: center; font-size: 11px; }
+  main { max-width: 1320px; margin: 26px auto 70px; padding: 0 32px; }
+  h1 { font: 600 30px/1.1 Georgia, serif; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin-bottom: 22px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+             background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+             padding: 12px 14px; margin-bottom: 14px; }
+  .field { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line);
+           border-radius: 4px; padding: 6px 10px; background: #fff; font-size: 13px; }
+  .field span { color: var(--muted); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+            border-radius: 999px; padding: 6px 12px; background: #fff; font-size: 13px; }
+  .toggle.on { border-color: #bcd6c6; background: #eef5f0; color: var(--green); font-weight: 600; }
+  .switch { width: 30px; height: 16px; border-radius: 999px; background: var(--green); position: relative; }
+  .switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 12px; height: 12px;
+                   border-radius: 50%; background: #fff; }
+  .btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+         border-radius: 4px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+  .pill { border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+          padding: 5px 12px; font-size: 12px; color: var(--muted); }
+  .pill b { color: var(--ink); }
+  .pill.green { border-color: #bcd6c6; background: #eef5f0; color: var(--green); }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .07em;
+       text-transform: uppercase; padding: 11px 12px; border-bottom: 1px solid var(--line); background: #faf6ee; }
+  td { padding: 12px; border-bottom: 1px solid #eee7db; vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: #fcf8f1; }
+  .name { font-weight: 600; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
+           border-radius: 999px; padding: 2px 8px; }
+  .ok { color: var(--green); background: #eef5f0; border: 1px solid #bcd6c6; }
+  .warn { color: #8a5b0b; background: #fbf4e4; border: 1px solid #ead3a8; }
+  .bad { color: #8c2f20; background: #fbece8; border: 1px solid #e8c3b9; }
+  .src { font-size: 10px; background: #f0eade; border-radius: 4px; padding: 2px 6px; color: #5d5347; }
+  .score { font: 600 16px Georgia, serif; }
+  .grade { color: var(--muted); font-size: 11px; }
+  .conf { width: 64px; }
+  .bar { height: 5px; background: #ece5d8; border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--ember); }
+  .footerbar { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; color: var(--muted); font-size: 12px; }
+  .pager { display: flex; gap: 6px; }
+  .pager span { border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; background: #fff; }
+  .pager .on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">LeadForge</div>
+  <nav><span class="on">Leads</span><span>Search jobs</span><span>Exports</span><span>Sources</span></nav>
+  <div class="spacer"></div>
+  <div class="avatar">JC</div>
+</div>
+
+<main>
+  <h1>Leads</h1>
+  <div class="sub">412 businesses in Peshawar · refreshed 12 minutes ago</div>
+
+  <div class="toolbar">
+    <div class="field"><span>Search</span> dentist</div>
+    <div class="field"><span>City</span> Peshawar</div>
+    <div class="field"><span>Grade</span> A+, A, B</div>
+    <div class="field"><span>Min score</span> 40</div>
+    <div class="toggle on"><span class="switch"></span> Verified email only</div>
+    <div class="toggle"><span>Has mobile</span></div>
+    <div class="toggle"><span>No website</span></div>
+    <div class="spacer" style="flex:1"></div>
+    <button class="btn ghost">Save segment</button>
+    <button class="btn">New export</button>
+  </div>
+
+  <div class="summary">
+    <span class="pill"><b>412</b> matched</span>
+    <span class="pill green"><b>388</b> verified email (94%)</span>
+    <span class="pill"><b>301</b> mobile number</span>
+    <span class="pill"><b>24</b> unverified hidden</span>
+    <span class="pill"><b>41</b> suppressed excluded</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28px"><input type="checkbox" /></th>
+        <th>Business</th>
+        <th>Contact</th>
+        <th>Channel</th>
+        <th>Score</th>
+        <th>Verification</th>
+        <th>Sources</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">Bright Smile Clinic</div><div class="meta">Dentist · Peshawar</div></td>
+        <td><div>sumaya@brightsmilesclinic.org <span class="badge ok">✓ verified</span></div>
+            <div class="meta">+92 332 9307688 · mobile</div></td>
+        <td>Email</td>
+        <td><span class="score">84</span> <span class="grade">B</span></td>
+        <td><div class="bar conf"><i style="width:94%"></i></div><div class="meta">94 · 2d ago</div></td>
+        <td><span class="src">maps</span> <span class="src">website</span></td>
+        <td class="meta">12m ago</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">Signature Smile Dental</div><div class="meta">Dentist · Peshawar</div></td>
+        <td><div>info@signaturesmile.com.pk <span class="badge ok">✓ verified</span></div>
+            <div class="meta">+92 313 9252147 · mobile</div></td>
+        <td>Email</td>
+        <td><span class="score">81</span> <span class="grade">B</span></td>
+        <td><div class="bar conf"><i style="width:91%"></i></div><div class="meta">91 · 3d ago</div></td>
+        <td><span class="src">maps</span> <span class="src">website</span></td>
+        <td class="meta">18m ago</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">Dental Square Peshawar</div><div class="meta">Dentist · Peshawar</div></td>
+        <td><div>contact@dentalsquarefamily.com <span class="badge ok">✓ verified</span></div>
+            <div class="meta">+92 332 9307688 · mobile</div></td>
+        <td>Email</td>
+        <td><span class="score">78</span> <span class="grade">B</span></td>
+        <td><div class="bar conf"><i style="width:89%"></i></div><div class="meta">89 · 1d ago</div></td>
+        <td><span class="src">maps</span> <span class="src">website</span></td>
+        <td class="meta">22m ago</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">Monal Peshawar</div><div class="meta">Restaurant · Peshawar</div></td>
+        <td><div>hello@themonal.com <span class="badge warn">catch-all</span></div>
+            <div class="meta">+92 301 1189124 · landline</div></td>
+        <td>Email</td>
+        <td><span class="score">76</span> <span class="grade">B</span></td>
+        <td><div class="bar conf"><i style="width:62%"></i></div><div class="meta">62 · 5d ago</div></td>
+        <td><span class="src">maps</span> <span class="src">website</span></td>
+        <td class="meta">1h ago</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">AlFa Dental Clinic</div><div class="meta">Dentist · Peshawar</div></td>
+        <td><div>— <span class="badge bad">no email</span></div>
+            <div class="meta">+92 317 6262644 · mobile</div></td>
+        <td>Phone</td>
+        <td><span class="score">68</span> <span class="grade">C</span></td>
+        <td><span class="badge bad">unverified</span></td>
+        <td><span class="src">maps</span></td>
+        <td class="meta">2h ago</td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" /></td>
+        <td><div class="name">Khan Dental &amp; Orthodontic</div><div class="meta">Dentist · Peshawar</div></td>
+        <td><div>clinic@khandental.pk <span class="badge ok">✓ verified</span></div>
+            <div class="meta">+92 345 8159297 · mobile</div></td>
+        <td>WhatsApp</td>
+        <td><span class="score">74</span> <span class="grade">C</span></td>
+        <td><div class="bar conf"><i style="width:87%"></i></div><div class="meta">87 · 4d ago</div></td>
+        <td><span class="src">maps</span> <span class="src">manual</span></td>
+        <td class="meta">3h ago</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footerbar">
+    <span>Showing 1–50 of 412 · verified filter on</span>
+    <div class="pager"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>…</span><span>9</span><span>›</span></div>
+  </div>
+</main>
+</body>
+</html>

@@ -15,6 +15,7 @@ dependencies = [
     "website-worker",
     "contact-worker",
     "social-worker",
+    "verification-worker",
     "scoring-worker",
     "export-worker",
 ]
@@ -26,6 +27,7 @@ members = [
     "workers/website_worker",
     "workers/contact_worker",
     "workers/social_worker",
+    "workers/verification_worker",
     "workers/scoring_worker",
     "workers/export_worker",
     "packages/config",
@@ -58,6 +60,7 @@ discovery-worker = { workspace = true }
 website-worker = { workspace = true }
 contact-worker = { workspace = true }
 social-worker = { workspace = true }
+verification-worker = { workspace = true }
 scoring-worker = { workspace = true }
 export-worker = { workspace = true }
 

@@ -130,6 +130,14 @@ def _request() -> Request:
     )
 
 
+class TestVerifyRouteAuth:
+    async def test_verify_requires_token(self) -> None:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(f"/api/v1/businesses/{uuid.uuid4()}/verify")
+        assert response.status_code == 401
+
+
 class TestRateLimit:
     async def test_allows_up_to_limit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         fake = _FakeRedis()

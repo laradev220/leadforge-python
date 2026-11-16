@@ -158,6 +158,21 @@ async def close_arq_pool() -> None:
         _arq_pool = None
 
 
-async def enqueue_job(queue_name: str, job_name: str, payload: dict[str, Any]) -> None:
+def verification_job_id(business_id: str | UUID) -> str:
+    """Collapse duplicate verification enqueues within the same minute."""
+    minute = int(time.time() // 60)
+    return f"verify:{business_id}:{minute}"
+
+
+async def enqueue_job(
+    queue_name: str,
+    job_name: str,
+    payload: dict[str, Any],
+    *,
+    job_id: str | None = None,
+) -> None:
     pool = await get_arq_pool()
-    await pool.enqueue_job(job_name, _queue_name=queue_name, **payload)
+    extra: dict[str, Any] = {"_queue_name": queue_name}
+    if job_id:
+        extra["_job_id"] = job_id
+    await pool.enqueue_job(job_name, **extra, **payload)

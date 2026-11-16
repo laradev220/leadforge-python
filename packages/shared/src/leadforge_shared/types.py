@@ -38,6 +38,29 @@ class ContactType(StrEnum):
     TWITTER = "TWITTER"
 
 
+class VerificationStatus(StrEnum):
+    UNVERIFIED = "UNVERIFIED"
+    VALID = "VALID"
+    RISKY = "RISKY"
+    CATCH_ALL = "CATCH_ALL"
+    INVALID = "INVALID"
+    UNKNOWN = "UNKNOWN"
+
+
+class PhoneLineType(StrEnum):
+    MOBILE = "MOBILE"
+    LANDLINE = "LANDLINE"
+    VOIP = "VOIP"
+    TOLL_FREE = "TOLL_FREE"
+    UNKNOWN = "UNKNOWN"
+
+
+class SuppressionKind(StrEnum):
+    EMAIL = "EMAIL"
+    PHONE = "PHONE"
+    DOMAIN = "DOMAIN"
+
+
 class ContactSource(StrEnum):
     MAPS = "MAPS"
     WEBSITE = "WEBSITE"
@@ -96,6 +119,7 @@ QueueName = Literal[
     "website",
     "contact",
     "social",
+    "verification",
     "scoring",
     "export",
 ]
@@ -122,6 +146,12 @@ class SocialJobData(BaseModel):
     model_config = ConfigDict(extra="forbid")
     business_id: UUID
     website_url: str = ""
+
+
+class VerificationJobData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    business_id: UUID
+    force: bool = False
 
 
 class ScoringJobData(BaseModel):
@@ -170,6 +200,7 @@ JobData = (
     | WebsiteJobData
     | ContactJobData
     | SocialJobData
+    | VerificationJobData
     | ScoringJobData
     | ExportJobData
 )

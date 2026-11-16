@@ -16,7 +16,7 @@ from leadforge_api.schemas import (
     SocialProfileResponse,
     WebsiteResponse,
 )
-from leadforge_api.services import business_service
+from leadforge_api.services import business_service, verification_service
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
 
@@ -67,6 +67,17 @@ async def get_business(business_id: str, user_id: CurrentUserId, session: DBSess
 async def re_enrich(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     await business_service.re_enrich(session, user_id, UUID(business_id))
     return success({"reEnriched": True})
+
+
+@router.post("/{business_id}/verify", response_model=None, status_code=202)
+async def verify_business(
+    business_id: str,
+    user_id: CurrentUserId,
+    session: DBSession,
+    force: bool = Query(False),
+) -> dict:
+    await verification_service.enqueue_single(session, user_id, UUID(business_id), force=force)
+    return success({"queued": True})
 
 
 @router.get("/{business_id}/website", response_model=None)

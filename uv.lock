@@ -16,6 +16,7 @@ members = [
     "leadforge-worker-core",
     "scoring-worker",
     "social-worker",
+    "verification-worker",
     "website-worker",
 ]
 
@@ -523,6 +524,7 @@ dependencies = [
     { name = "leadforge-worker-core" },
     { name = "scoring-worker" },
     { name = "social-worker" },
+    { name = "verification-worker" },
     { name = "website-worker" },
 ]
 
@@ -551,6 +553,7 @@ requires-dist = [
     { name = "leadforge-worker-core", editable = "packages/worker_core" },
     { name = "scoring-worker", editable = "workers/scoring_worker" },
     { name = "social-worker", editable = "workers/social_worker" },
+    { name = "verification-worker", editable = "workers/verification_worker" },
     { name = "website-worker", editable = "workers/website_worker" },
 ]
 
@@ -1330,6 +1333,27 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/6f/e62b4dfc7ad6518e7eff2516f680d02a0f6eb62c0c212e152ca708a0085e/uvloop-0.22.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7b5b1ac819a3f946d3b2ee07f09149578ae76066d70b44df3fa990add49a82e4", size = 4426307, upload-time = "2025-10-16T22:16:32.917Z" },
     { url = "https://files.pythonhosted.org/packages/90/60/97362554ac21e20e81bcef1150cb2a7e4ffdaf8ea1e5b2e8bf7a053caa18/uvloop-0.22.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:e047cc068570bac9866237739607d1313b9253c3051ad84738cbb095be0537b2", size = 4131970, upload-time = "2025-10-16T22:16:34.015Z" },
     { url = "https://files.pythonhosted.org/packages/99/39/6b3f7d234ba3964c428a6e40006340f53ba37993f46ed6e111c6e9141d18/uvloop-0.22.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:512fec6815e2dd45161054592441ef76c830eddaad55c8aa30952e6fe1ed07c0", size = 4296343, upload-time = "2025-10-16T22:16:35.149Z" },
+]
+
+[[package]]
+name = "verification-worker"
+version = "1.0.0"
+source = { editable = "workers/verification_worker" }
+dependencies = [
+    { name = "arq" },
+    { name = "leadforge-config" },
+    { name = "leadforge-database" },
+    { name = "leadforge-shared" },
+    { name = "leadforge-worker-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arq", specifier = ">=0.26" },
+    { name = "leadforge-config", editable = "packages/config" },
+    { name = "leadforge-database", editable = "packages/database" },
+    { name = "leadforge-shared", editable = "packages/shared" },
+    { name = "leadforge-worker-core", editable = "packages/worker_core" },
 ]
 
 [[package]]

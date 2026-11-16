@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>New export — verified leads</title>
+<style>
+  :root {
+    --paper: #f6f1e8; --ink: #17130f; --muted: #7a6f63; --line: #d9d0c3;
+    --ember: #b4431e; --green: #2f6b45; --card: #fffdf8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: rgba(23,19,15,.45);
+         font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+         display: grid; place-items: start center; padding: 48px 16px; }
+  .modal { width: 620px; background: var(--paper); border-radius: 8px;
+           box-shadow: 0 24px 80px rgba(0,0,0,.35); overflow: hidden; }
+  header { display: flex; align-items: center; justify-content: space-between;
+           padding: 18px 22px; border-bottom: 1px solid var(--line); background: var(--card); }
+  h1 { font: 600 20px Georgia, serif; margin: 0; }
+  .x { border: 0; background: none; font-size: 18px; color: var(--muted); cursor: pointer; }
+  .body { padding: 20px 22px 8px; }
+  h2 { font: 600 12px/1 -apple-system, sans-serif; text-transform: uppercase;
+       letter-spacing: .09em; color: var(--muted); margin: 18px 0 10px; }
+  h2:first-child { margin-top: 0; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; width: max-content; }
+  .seg span { padding: 7px 18px; font-size: 13px; background: #fff; border-right: 1px solid var(--line); }
+  .seg span:last-child { border-right: 0; }
+  .seg .on { background: var(--ink); color: var(--paper); font-weight: 600; }
+  .row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .txt { flex: 1; }
+  .row .t { font-weight: 600; }
+  .row .d { color: var(--muted); font-size: 12px; }
+  .check { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--line);
+           background: #fff; display: grid; place-items: center; font-size: 12px; color: #fff; margin-top: 2px; }
+  .check.on { background: var(--green); border-color: var(--green); }
+  .check.locked { background: #e9e2d5; border-color: #d5cbbd; color: var(--muted); }
+  .lock { font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+          border-radius: 999px; padding: 1px 8px; }
+  .coverage { background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+              padding: 14px 16px; margin-top: 18px; }
+  .coverage .big { font: 600 26px/1 Georgia, serif; }
+  .coverage .line { display: flex; justify-content: space-between; font-size: 12px;
+                    color: var(--muted); margin-top: 6px; }
+  .coverage .line b { color: var(--ink); }
+  .bar { height: 8px; background: #ece5d8; border-radius: 4px; overflow: hidden; margin: 12px 0 6px; display: flex; }
+  .bar .v { background: var(--green); height: 100%; }
+  .bar .u { background: #d8cfc1; height: 100%; }
+  .delivery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dest { border: 1px solid var(--line); background: #fff; border-radius: 5px;
+          padding: 10px 12px; font-size: 13px; position: relative; }
+  .dest.on { border-color: var(--green); background: #eef5f0; }
+  .dest .soon { position: absolute; top: 8px; right: 8px; font-size: 9px;
+                text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  footer { display: flex; align-items: center; justify-content: space-between;
+           padding: 16px 22px; border-top: 1px solid var(--line); background: var(--card); }
+  .note { color: var(--muted); font-size: 12px; max-width: 330px; }
+  .btn { border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+         border-radius: 4px; padding: 10px 16px; font-size: 13px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .guarantee { display: flex; gap: 10px; align-items: flex-start; background: #eef5f0;
+               border: 1px solid #bcd6c6; color: #28573a; border-radius: 6px;
+               padding: 10px 12px; font-size: 12px; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="modal">
+    <header>
+      <h1>New export</h1>
+      <button class="x">✕</button>
+    </header>
+
+    <div class="body">
+      <h2>Format</h2>
+      <div class="seg"><span class="on">CSV</span><span>XLSX</span><span>JSON</span></div>
+
+      <h2>Filters</h2>
+      <div class="row" style="padding-top:0">
+        <div class="txt">
+          <div class="t">Dentist · Peshawar · min score 40</div>
+          <div class="d">Segment: "Peshawar dentists — no booking" saved 2 days ago</div>
+        </div>
+        <span class="lock">edit filters</span>
+      </div>
+
+      <h2>Data quality</h2>
+      <div class="row">
+        <div class="check on">✓</div>
+        <div class="txt">
+          <div class="t">Only verified emails <span class="lock">included</span></div>
+          <div class="d">MX record + mailbox check passed within the last 30 days.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="check on">✓</div>
+        <div class="txt">
+          <div class="t">Exclude suppressed &amp; do-not-contact <span class="lock">always on</span></div>
+          <div class="d">41 records removed. Suppression survives re-exports.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="check locked">–</div>
+        <div class="txt">
+          <div class="t">Include unverified leads</div>
+          <div class="d">Off by default. Available for research, never for cold sending.</div>
+        </div>
+      </div>
+
+      <div class="coverage">
+        <div class="big">388 verified leads</div>
+        <div class="bar"><div class="v" style="width:94%"></div><div class="u" style="width:6%"></div></div>
+        <div class="line"><span><b>412</b> matched</span><span><b>388</b> verified</span><span><b>24</b> hidden</span><span><b>41</b> suppressed</span></div>
+      </div>
+
+      <h2>Delivery</h2>
+      <div class="delivery">
+        <div class="dest on">Download file</div>
+        <div class="dest">Google Sheets <span class="soon">soon</span></div>
+        <div class="dest">HubSpot <span class="soon">soon</span></div>
+      </div>
+
+      <div class="guarantee">
+        <b>✓</b>
+        <div>Verification is included, not metered. Re-verify any export for free; results are stamped with the verification date so you always know how fresh the list is.</div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="note">Verification age is included as a column. Leads older than 30 days are marked stale and re-checked before a CRM push.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost">Cancel</button>
+        <button class="btn">Export 388 verified leads</button>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

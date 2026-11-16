@@ -26,7 +26,11 @@ from leadforge_scraper_core import extract_social_profiles
 from leadforge_scraper_core.social_platforms import get_social_platform_search_terms
 from leadforge_shared.dates import parse_last_activity
 from leadforge_shared.types import SocialJobData
-from leadforge_worker_core.core import WorkerWrapper, enqueue_job
+from leadforge_worker_core.core import (
+    WorkerWrapper,
+    enqueue_job,
+    verification_job_id,
+)
 from sqlalchemy import func, select
 
 logger = structlog.get_logger("worker.social")
@@ -293,7 +297,12 @@ async def social_processor(data: SocialJobData, log):
 
     # ── Phase 3: Scrape profiles (rate-limited, sequential) ───────────────
     if not saved_profiles:
-        await enqueue_job("scoring", "scoring", {"business_id": str(business_id)})
+        await enqueue_job(
+            "verification",
+            "verification",
+            {"business_id": str(business_id), "force": False},
+            job_id=verification_job_id(str(business_id)),
+        )
         return
 
     log.info(
@@ -402,7 +411,12 @@ async def social_processor(data: SocialJobData, log):
                 log.error("profile_update_failed", error=str(e))
         await session.commit()
 
-    await enqueue_job("scoring", "scoring", {"business_id": str(business_id)})
+    await enqueue_job(
+        "verification",
+        "verification",
+        {"business_id": str(business_id), "force": False},
+        job_id=verification_job_id(str(business_id)),
+    )
 
 
 async def _scrape_profile(

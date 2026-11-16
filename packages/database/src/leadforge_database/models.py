@@ -11,9 +11,12 @@ from leadforge_shared.types import (
     ContactType,
     EnrichmentStatus,
     ExportFormat,
+    PhoneLineType,
     SearchJobStatus,
     SocialPlatform,
+    SuppressionKind,
     UserRole,
+    VerificationStatus,
     WebsiteStatus,
 )
 from sqlalchemy import (
@@ -148,6 +151,7 @@ class Business(Base):
     social_profiles: Mapped[list[SocialProfile]] = relationship(back_populates="business")
     lead_score: Mapped[LeadScore | None] = relationship(back_populates="business", uselist=False)
     enrichment_runs: Mapped[list[EnrichmentRun]] = relationship(back_populates="business")
+    provenance: Mapped[list[FieldProvenance]] = relationship(back_populates="business")
 
     __table_args__ = (
         Index("ix_businesses_name", "name"),
@@ -229,6 +233,27 @@ class Contact(Base):
     )
     confidence_score: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verification_status: Mapped[VerificationStatus] = mapped_column(
+        SAEnum(
+            VerificationStatus,
+            name="verification_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        default=VerificationStatus.UNVERIFIED,
+        server_default=VerificationStatus.UNVERIFIED.value,
+        nullable=False,
+    )
+    verification_confidence: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    verification_reason: Mapped[str | None] = mapped_column(Text)
+    verification_method: Mapped[str | None] = mapped_column(String(32))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    line_type: Mapped[PhoneLineType | None] = mapped_column(
+        SAEnum(
+            PhoneLineType, name="phone_line_type", values_callable=lambda e: [m.value for m in e]
+        )
+    )
     created_at: Mapped[datetime] = _now()
 
     business: Mapped[Business] = relationship(back_populates="contacts")
@@ -237,6 +262,66 @@ class Contact(Base):
         Index("ix_contacts_business_id", "business_id"),
         Index("ix_contacts_type", "type"),
         Index("ix_contacts_value", "value"),
+        Index("ix_contacts_business_type_status", "business_id", "type", "verification_status"),
+        Index("ix_contacts_verified_at", "verified_at"),
+    )
+
+
+class FieldProvenance(Base):
+    """Where a business field came from, when it was first seen, when last checked."""
+
+    __tablename__ = "field_provenance"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        _UUID, ForeignKey("businesses.id"), nullable=False
+    )
+    field: Mapped[str] = mapped_column(String(64), nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    first_seen_at: Mapped[datetime] = _now()
+    last_checked_at: Mapped[datetime] = _now()
+    enrichment_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        _UUID, ForeignKey("enrichment_runs.id")
+    )
+
+    business: Mapped[Business] = relationship(back_populates="provenance")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "business_id", "field", "value", name="uq_field_provenance_business_field_value"
+        ),
+        Index("ix_field_provenance_business_id", "business_id"),
+        Index("ix_field_provenance_field", "field"),
+    )
+
+
+class Suppression(Base):
+    """Workspace-scoped do-not-contact entries enforced on export."""
+
+    __tablename__ = "suppressions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(_UUID, ForeignKey("users.id"), nullable=False)
+    kind: Mapped[SuppressionKind] = mapped_column(
+        SAEnum(
+            SuppressionKind,
+            name="suppression_kind",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    reason: Mapped[str] = mapped_column(String(64), default="manual", nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = _now()
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "kind", "value", name="uq_suppressions_user_kind_value"),
+        Index("ix_suppressions_user_id", "user_id"),
+        Index("ix_suppressions_value", "value"),
     )
 
 

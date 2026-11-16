@@ -46,6 +46,9 @@ run-contact-worker:
 run-social-worker:
 	uv run python -m leadforge_social_worker
 
+run-verification-worker:
+	uv run python -m leadforge_verification_worker
+
 run-scoring-worker:
 	uv run python -m leadforge_scoring_worker
 
@@ -56,11 +59,12 @@ LOG_DIR := logs
 
 run-all-workers:
 	@mkdir -p $(LOG_DIR)
-	@echo "Starting all 6 workers — logs go to logs/<worker>.log"
+	@echo "Starting all 7 workers — logs go to logs/<worker>.log"
 	uv run python -m leadforge_discovery_worker > $(LOG_DIR)/discovery.log 2>&1 &
 	uv run python -m leadforge_website_worker   > $(LOG_DIR)/website.log 2>&1 &
 	uv run python -m leadforge_contact_worker   > $(LOG_DIR)/contact.log 2>&1 &
 	uv run python -m leadforge_social_worker    > $(LOG_DIR)/social.log 2>&1 &
+	uv run python -m leadforge_verification_worker > $(LOG_DIR)/verification.log 2>&1 &
 	uv run python -m leadforge_scoring_worker   > $(LOG_DIR)/scoring.log 2>&1 &
 	uv run python -m leadforge_export_worker    > $(LOG_DIR)/export.log 2>&1 &
 	@echo "✓ All workers started"
@@ -139,6 +143,7 @@ kill-all-workers:
 	-pkill -f "leadforge_website_worker" 2>/dev/null || true
 	-pkill -f "leadforge_contact_worker" 2>/dev/null || true
 	-pkill -f "leadforge_social_worker" 2>/dev/null || true
+	-pkill -f "leadforge_verification_worker" 2>/dev/null || true
 	-pkill -f "leadforge_scoring_worker" 2>/dev/null || true
 	-pkill -f "leadforge_export_worker" 2>/dev/null || true
 	@echo "✓ All workers stopped"

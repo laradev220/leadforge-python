@@ -1,0 +1,19 @@
+[project]
+name = "verification-worker"
+version = "1.0.0"
+description = "Verifies contact emails and phone line types"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "arq>=0.26",
+    "leadforge-config",
+    "leadforge-database",
+    "leadforge-shared",
+    "leadforge-worker-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leadforge_verification_worker"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
