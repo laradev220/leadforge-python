@@ -14,7 +14,10 @@
   - proof 2026-11-16: info@signaturesmile.com.pk -> RISKY (mx_present, 60);
     contact@dentalsquarefamily.com -> INVALID (mx_missing, domain genuinely has no MX);
     +923139252147 -> VALID/MOBILE (phone_lib, 80); scoring followed each run
-- [ ] Slice 3 — bulk verify, force refresh, 30-day freshness skip
+- [x] Slice 3 — bulk verify, force refresh, 30-day freshness skip
+  - proof 2026-11-16: POST /businesses/verify {city:Peshawar,limit:3} -> queued=3, 3 jobs ran;
+    repeat on fresh lead -> skipped_fresh=2, 0 network checks;
+    ?force=true -> skipped_fresh=0, emails=1 phones=1; job id bucketed per minute
 - [ ] Slice 4 — provenance writes in all stages + provenance API/response
 - [ ] Slice 5 — verified/mobile lead filters + list UI badges
 - [ ] Slice 6 — verified-only suppression-safe exports + export UI coverage

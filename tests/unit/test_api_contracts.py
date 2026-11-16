@@ -18,7 +18,7 @@ from leadforge_api.core.errors import AppError
 from leadforge_api.core.ratelimit import enforce_rate_limit
 from leadforge_api.core.response import paginated
 from leadforge_api.main import app
-from leadforge_api.schemas import CreateExportRequest
+from leadforge_api.schemas import BulkVerifyRequest, CreateExportRequest
 from leadforge_export_worker.main import export as export_job
 from leadforge_shared.types import ExportFilters, ExportJobData
 from pydantic import ValidationError
@@ -82,6 +82,18 @@ class TestExportJobContract:
         assert payload.filters is not None
         assert payload.filters.score_min == 10
         assert payload.filters.grade.value == "A"
+
+
+class TestBulkVerifySchema:
+    def test_limit_is_capped(self) -> None:
+        with pytest.raises(ValidationError):
+            BulkVerifyRequest(limit=501)
+
+    def test_defaults(self) -> None:
+        body = BulkVerifyRequest()
+        assert body.limit == 500
+        assert body.force is False
+        assert body.verified_email is False
 
 
 class TestPaginationContract:

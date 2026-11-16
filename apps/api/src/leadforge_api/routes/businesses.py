@@ -11,6 +11,8 @@ from leadforge_api.core.pagination import get_pagination
 from leadforge_api.core.response import paginated, success
 from leadforge_api.schemas import (
     AddContactRequest,
+    BulkVerifyRequest,
+    BulkVerifyResponse,
     BusinessResponse,
     ContactResponse,
     SocialProfileResponse,
@@ -55,6 +57,14 @@ async def list_businesses(
         pagination.page,
         pagination.limit,
     )
+
+
+@router.post("/verify", response_model=None, status_code=202)
+async def verify_bulk(body: BulkVerifyRequest, user_id: CurrentUserId, session: DBSession) -> dict:
+    queued = await verification_service.enqueue_bulk(
+        session, user_id, filters=body, force=body.force, limit=body.limit
+    )
+    return success(BulkVerifyResponse(queued=queued).model_dump(mode="json"))
 
 
 @router.get("/{business_id}", response_model=None)

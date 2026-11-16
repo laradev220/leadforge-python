@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -61,7 +61,9 @@ class _FakeVerifier:
         )
 
 
-def _contact(contact_type: ContactType, value: str) -> SimpleNamespace:
+def _contact(
+    contact_type: ContactType, value: str, *, verified_at: datetime | None = None
+) -> SimpleNamespace:
     return SimpleNamespace(
         type=contact_type,
         value=value,
@@ -69,7 +71,7 @@ def _contact(contact_type: ContactType, value: str) -> SimpleNamespace:
         verification_confidence=50,
         verification_reason=None,
         verification_method=None,
-        verified_at=None,
+        verified_at=verified_at,
         line_type=None,
         is_verified=False,
     )
@@ -143,3 +145,59 @@ async def test_worker_handles_unparseable_phone(monkeypatch: pytest.MonkeyPatch)
     assert phone.verification_status == VerificationStatus.UNKNOWN
     assert phone.verification_reason == "unparseable_phone"
     assert phone.line_type is None
+
+
+async def test_worker_skips_fresh_contacts(monkeypatch: pytest.MonkeyPatch) -> None:
+    business_id = uuid.uuid4()
+    email = _contact(ContactType.EMAIL, "info@clinic.pk", verified_at=datetime.now(UTC))
+    phone = _contact(
+        ContactType.PHONE, "+923329307688", verified_at=datetime.now(UTC) - timedelta(days=3)
+    )
+    session = _FakeSession([email, phone])
+    verifier = _FakeVerifier()
+    enqueued: list[tuple] = []
+
+    @asynccontextmanager
+    async def fake_ctx():
+        yield session
+
+    async def fake_enqueue(queue_name, job_name, payload, **kwargs):
+        enqueued.append((queue_name, job_name, payload))
+
+    monkeypatch.setattr(worker_main, "get_session_ctx", fake_ctx)
+    monkeypatch.setattr(worker_main, "enqueue_job", fake_enqueue)
+    monkeypatch.setattr(worker_main, "_get_verifier", lambda: verifier)
+
+    await worker_main.verification_processor(
+        VerificationJobData(business_id=business_id), SimpleNamespace(info=lambda *a, **k: None)
+    )
+
+    assert verifier.calls == []
+    assert email.verification_status == VerificationStatus.UNVERIFIED
+    assert enqueued[0][0] == "scoring"
+
+
+async def test_worker_force_reverifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    business_id = uuid.uuid4()
+    email = _contact(ContactType.EMAIL, "info@clinic.pk", verified_at=datetime.now(UTC))
+    session = _FakeSession([email])
+    verifier = _FakeVerifier()
+
+    @asynccontextmanager
+    async def fake_ctx():
+        yield session
+
+    async def fake_enqueue(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(worker_main, "get_session_ctx", fake_ctx)
+    monkeypatch.setattr(worker_main, "enqueue_job", fake_enqueue)
+    monkeypatch.setattr(worker_main, "_get_verifier", lambda: verifier)
+
+    await worker_main.verification_processor(
+        VerificationJobData(business_id=business_id, force=True),
+        SimpleNamespace(info=lambda *a, **k: None),
+    )
+
+    assert verifier.calls == ["info@clinic.pk"]
+    assert email.verification_status == VerificationStatus.RISKY

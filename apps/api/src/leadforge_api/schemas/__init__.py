@@ -232,6 +232,31 @@ class LeadResponse(BaseModel):
     website: WebsiteResponse | None
 
 
+# ---------- Verification ----------
+
+
+class BulkVerifyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    score_min: int | None = Field(default=None, ge=0, le=100)
+    score_max: int | None = Field(default=None, ge=0, le=100)
+    grade: str | None = None
+    website_status: str | None = None
+    best_contact_method: str | None = None
+    city: str | None = None
+    country: str | None = None
+    verified_email: bool = False
+    has_mobile: bool = False
+    force: bool = False
+    limit: int = Field(default=500, ge=1, le=500)
+
+
+class BulkVerifyResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    queued: int
+
+
 # ---------- Exports ----------
 
 

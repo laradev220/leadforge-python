@@ -6,9 +6,10 @@ SMTP/provider mailbox checks arrive in a later slice.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Contact, ContactType
 from leadforge_shared.types import (
@@ -56,6 +57,8 @@ async def verification_processor(data: VerificationJobData, log):
     log.info("verifying_contacts", businessId=str(business_id), force=data.force)
 
     verifier = _get_verifier()
+    max_age_days = get_settings().verify_max_age_days
+    cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
 
     async with get_session_ctx() as session:
         country = await session.scalar(select(Business.country).where(Business.id == business_id))
@@ -66,7 +69,16 @@ async def verification_processor(data: VerificationJobData, log):
 
         emails = 0
         phones = 0
+        skipped = 0
         for contact in contacts:
+            if (
+                not data.force
+                and contact.type in (ContactType.EMAIL, ContactType.PHONE)
+                and contact.verified_at is not None
+                and contact.verified_at >= cutoff
+            ):
+                skipped += 1
+                continue
             if contact.type == ContactType.EMAIL:
                 outcome = await verify_email(contact.value, verifier)
                 _apply(
@@ -107,6 +119,8 @@ async def verification_processor(data: VerificationJobData, log):
         contacts=len(contacts),
         emails=emails,
         phones=phones,
+        skipped_fresh=skipped,
+        force=data.force,
     )
     await enqueue_job("scoring", "scoring", {"business_id": str(business_id)})
 
