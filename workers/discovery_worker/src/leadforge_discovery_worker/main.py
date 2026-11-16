@@ -15,6 +15,7 @@ from leadforge_database.models import (
     SearchJobStatus,
     Website,
 )
+from leadforge_database.provenance import record_many
 from leadforge_scraper_core import search_businesses
 from leadforge_shared.types import DiscoveryJobData
 from leadforge_shared.utils import extract_domain, normalize_phone
@@ -185,6 +186,24 @@ async def discovery_processor(data: DiscoveryJobData, logger):
                                 domain=extract_domain(website_url),
                             )
                         )
+
+                await record_many(
+                    session,
+                    business_id=existing.id,
+                    values={
+                        "name": biz.name,
+                        "category": biz.category,
+                        "address": biz.address,
+                        "city": biz.city or location_city,
+                        "country": biz.country or location_country,
+                        "phone": _normalize_phone(biz.phone, phone_region),
+                        "website": getattr(biz, "website", None),
+                        "rating": biz.rating,
+                    },
+                    source=(biz.source or "discovery").lower(),
+                    source_url=getattr(biz, "website", None),
+                    confidence=80,
+                )
 
                 link_exists = await session.scalar(
                     select(SearchJobBusiness.id).where(

@@ -22,6 +22,7 @@ import structlog
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, SocialProfile
+from leadforge_database.provenance import record_provenance
 from leadforge_scraper_core import extract_social_profiles
 from leadforge_scraper_core.social_platforms import get_social_platform_search_terms
 from leadforge_shared.dates import parse_last_activity
@@ -403,6 +404,15 @@ async def social_processor(data: SocialJobData, log):
                         if parsed is not None:
                             db_sp.last_activity_at = parsed
                             updated = True
+                    await record_provenance(
+                        session,
+                        business_id=business_id,
+                        field=f"social_{str(db_sp.platform).lower()}",
+                        value=db_sp.profile_url,
+                        source="social",
+                        source_url=db_sp.profile_url,
+                        confidence=70,
+                    )
                     if updated:
                         log.info(
                             "profile_updated", platform=db_sp.platform, fields=list(contacts.keys())

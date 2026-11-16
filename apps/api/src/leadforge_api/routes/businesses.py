@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from leadforge_database.provenance import provenance_for_business
 
 from leadforge_api.core.deps import CurrentUserId, DBSession
 from leadforge_api.core.pagination import get_pagination
@@ -15,6 +16,7 @@ from leadforge_api.schemas import (
     BulkVerifyResponse,
     BusinessResponse,
     ContactResponse,
+    ProvenanceResponse,
     SocialProfileResponse,
     WebsiteResponse,
 )
@@ -88,6 +90,13 @@ async def verify_business(
 ) -> dict:
     await verification_service.enqueue_single(session, user_id, UUID(business_id), force=force)
     return success({"queued": True})
+
+
+@router.get("/{business_id}/provenance", response_model=None)
+async def business_provenance(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
+    business = await business_service.get_by_id(session, user_id, UUID(business_id))
+    rows = await provenance_for_business(session, business.id)
+    return success([ProvenanceResponse.model_validate(row).model_dump(mode="json") for row in rows])
 
 
 @router.get("/{business_id}/website", response_model=None)

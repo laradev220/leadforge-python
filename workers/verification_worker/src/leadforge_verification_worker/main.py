@@ -12,6 +12,7 @@ from uuid import UUID
 from leadforge_config import get_settings
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Contact, ContactType
+from leadforge_database.provenance import record_provenance
 from leadforge_shared.types import (
     PhoneLineType,
     VerificationJobData,
@@ -88,6 +89,14 @@ async def verification_processor(data: VerificationJobData, log):
                     reason=outcome.reason,
                     method=outcome.method,
                 )
+                await record_provenance(
+                    session,
+                    business_id=business_id,
+                    field="email_status",
+                    value=f"{contact.value} ({outcome.status.value})",
+                    source="verification",
+                    confidence=outcome.confidence,
+                )
                 emails += 1
             elif contact.type == ContactType.PHONE:
                 line_type, normalized = classify_phone(contact.value, region)
@@ -108,6 +117,14 @@ async def verification_processor(data: VerificationJobData, log):
                         confidence=80 if line_type != PhoneLineType.UNKNOWN else 40,
                         reason=f"line_type:{line_type.value.lower()}",
                         method="phone_lib",
+                    )
+                    await record_provenance(
+                        session,
+                        business_id=business_id,
+                        field="phone_type",
+                        value=f"{contact.value} ({line_type.value})",
+                        source="verification",
+                        confidence=80 if line_type != PhoneLineType.UNKNOWN else 40,
                     )
                 phones += 1
 

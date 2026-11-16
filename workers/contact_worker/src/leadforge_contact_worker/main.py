@@ -10,6 +10,7 @@ from uuid import UUID
 
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Contact, ContactSource, ContactType
+from leadforge_database.provenance import record_provenance
 from leadforge_scraper_core import crawl_website, extract_contacts, get_priority_urls
 from leadforge_shared.types import ContactJobData
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
@@ -52,6 +53,14 @@ async def _extract_from_business_record(business_id, session, logger):
             confidence_score=80,
             is_verified=False,
         )
+    )
+    await record_provenance(
+        session,
+        business_id=business_id,
+        field="phone",
+        value=phone,
+        source="google_maps",
+        confidence=80,
     )
     logger.info(
         "contact_extracted_from_business_record",
@@ -118,6 +127,15 @@ async def contact_processor(data: ContactJobData, logger):
                         confidence_score=c.confidence_score,
                     )
                 )
+            await record_provenance(
+                session,
+                business_id=business_id,
+                field=c.type.lower(),
+                value=c.value,
+                source="website",
+                source_url=website_url,
+                confidence=c.confidence_score,
+            )
         await session.commit()
 
     await enqueue_job(

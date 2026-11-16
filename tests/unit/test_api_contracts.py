@@ -31,6 +31,7 @@ PROTECTED_ROUTES = (
     "/api/v1/analytics/dashboard",
     "/api/v1/analytics/lead-distribution",
     "/api/v1/exports",
+    f"/api/v1/businesses/{uuid.uuid4()}/provenance",
 )
 
 

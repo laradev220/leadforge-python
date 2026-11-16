@@ -258,6 +258,20 @@ class Contact(Base):
 
     business: Mapped[Business] = relationship(back_populates="contacts")
 
+    @property
+    def verification(self) -> dict[str, object] | None:
+        """Nested verification payload consumed by the API schema."""
+        if self.verification_status == VerificationStatus.UNVERIFIED and self.verified_at is None:
+            return None
+        return {
+            "status": self.verification_status,
+            "confidence": self.verification_confidence,
+            "reason": self.verification_reason,
+            "method": self.verification_method,
+            "checked_at": self.verified_at,
+            "line_type": self.line_type,
+        }
+
     __table_args__ = (
         Index("ix_contacts_business_id", "business_id"),
         Index("ix_contacts_type", "type"),

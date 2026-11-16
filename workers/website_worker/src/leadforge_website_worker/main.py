@@ -12,6 +12,7 @@ from uuid import UUID
 import httpx
 from leadforge_database import get_session_ctx
 from leadforge_database.models import Business, Website, WebsiteStatus
+from leadforge_database.provenance import record_many
 from leadforge_scraper_core import analyze_website
 from leadforge_shared.types import WebsiteJobData
 from leadforge_worker_core.core import WorkerWrapper, enqueue_job
@@ -196,6 +197,13 @@ async def website_processor(data: WebsiteJobData, logger):
                     name=business_name,
                 )
                 business.website_status = WebsiteStatus.NOT_FOUND
+                await record_many(
+                    session,
+                    business_id=business_id,
+                    values={"website_status": WebsiteStatus.NOT_FOUND.value},
+                    source="website",
+                    confidence=85,
+                )
                 await session.commit()
                 await enqueue_job(
                     "contact", "contact", {"business_id": str(business_id), "website_url": ""}
@@ -215,6 +223,24 @@ async def website_processor(data: WebsiteJobData, logger):
 
         business.website_status = (
             WebsiteStatus.FOUND if analysis.is_reachable else WebsiteStatus.INVALID
+        )
+
+        await record_many(
+            session,
+            business_id=business_id,
+            values={
+                "website_url": website_url,
+                "website_status": business.website_status.value,
+                "ssl_enabled": analysis.ssl_enabled,
+                "is_reachable": analysis.is_reachable,
+                "http_status": analysis.http_status,
+                "load_time_ms": analysis.load_time_ms,
+                "mobile_friendly": analysis.mobile_friendly,
+                "seo_score": analysis.seo_score,
+            },
+            source="website",
+            source_url=website_url,
+            confidence=85,
         )
 
         await session.commit()

@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from leadforge_database.provenance import provenance_for_business
 
 from leadforge_api.core.deps import CurrentUserId, DBSession
 from leadforge_api.core.pagination import get_pagination
@@ -65,6 +66,7 @@ async def list_leads(
 @router.get("/{business_id}", response_model=None)
 async def get_lead(business_id: str, user_id: CurrentUserId, session: DBSession) -> dict:
     business = await lead_service.get_lead(session, user_id, UUID(business_id))
+    provenance = await provenance_for_business(session, business.id)
     return success(
         LeadResponse.model_validate(
             {
@@ -73,6 +75,7 @@ async def get_lead(business_id: str, user_id: CurrentUserId, session: DBSession)
                 "contacts": business.contacts or [],
                 "social_profiles": business.social_profiles or [],
                 "website": business.website,
+                "provenance": provenance,
             }
         ).model_dump(mode="json")
     )

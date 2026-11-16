@@ -18,7 +18,10 @@
   - proof 2026-11-16: POST /businesses/verify {city:Peshawar,limit:3} -> queued=3, 3 jobs ran;
     repeat on fresh lead -> skipped_fresh=2, 0 network checks;
     ?force=true -> skipped_fresh=0, emails=1 phones=1; job id bucketed per minute
-- [ ] Slice 4 — provenance writes in all stages + provenance API/response
+- [x] Slice 4 — provenance writes in all stages + provenance API/response
+  - proof 2026-11-16: Signature Smile re-enrich -> 17 provenance rows (website,
+    contact, social, verification); GET /leads/{id} includes provenance and
+    contacts[].verification; repeat upsert keeps first_seen, refreshes last_checked
 - [ ] Slice 5 — verified/mobile lead filters + list UI badges
 - [ ] Slice 6 — verified-only suppression-safe exports + export UI coverage
 - [ ] Slice 7 — detail proof panel, admin queue, env/Makefile/README polish

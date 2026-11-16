@@ -11,9 +11,11 @@ from leadforge_shared.types import (
     ExportFilters,
     ExportFormat,
     LeadGrade,
+    PhoneLineType,
     SearchJobStatus,
     SocialPlatform,
     UserRole,
+    VerificationStatus,
     WebsiteStatus,
 )
 from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field
@@ -149,6 +151,15 @@ class WebsiteResponse(BaseModel):
     last_checked_at: datetime | None
 
 
+class ContactVerificationResponse(BaseModel):
+    status: VerificationStatus
+    confidence: int
+    reason: str | None
+    method: str | None
+    checked_at: datetime | None
+    line_type: PhoneLineType | None
+
+
 class ContactResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -158,7 +169,19 @@ class ContactResponse(BaseModel):
     source: ContactSource
     confidence_score: int
     is_verified: bool
+    verification: ContactVerificationResponse | None = None
     created_at: datetime
+
+
+class ProvenanceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    field: str
+    value: str
+    source: str
+    source_url: str | None
+    confidence: int
+    first_seen_at: datetime
+    last_checked_at: datetime
 
 
 class AddContactRequest(BaseModel):
@@ -230,6 +253,7 @@ class LeadResponse(BaseModel):
     contacts: list[ContactResponse]
     social_profiles: list[SocialProfileResponse]
     website: WebsiteResponse | None
+    provenance: list[ProvenanceResponse] = Field(default_factory=list)
 
 
 # ---------- Verification ----------
