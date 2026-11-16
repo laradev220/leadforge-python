@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 
 from leadforge_shared.types import PhoneLineType, VerificationStatus
-from leadforge_verification import classify_phone, verify_email
+from leadforge_verification import (
+    SmtpEmailVerifier,
+    ZeroBounceVerifier,
+    build_email_verifier,
+    classify_phone,
+    verify_email,
+)
 from leadforge_verification.providers import MxEmailVerifier
 
 
@@ -96,3 +103,105 @@ class TestPhoneClassification:
 
     def test_empty_is_unknown(self) -> None:
         assert classify_phone("") == (PhoneLineType.UNKNOWN, None)
+
+
+class TestSmtpVerifier:
+    async def _run(self, code: int | None):
+        async def lookup(_domain: str, _timeout: int) -> str | None:
+            return "mx.clinic.pk"
+
+        async def probe(_host: str, _timeout: int, _helo: str, _rcpt: str):
+            return code
+
+        verifier = SmtpEmailVerifier(host_lookup=lookup, probe=probe)
+        return await verifier.verify("info@clinic.pk")
+
+    async def test_250_is_valid(self) -> None:
+        outcome = await self._run(250)
+        assert outcome.status == VerificationStatus.VALID
+        assert outcome.confidence == 90
+        assert outcome.reason == "smtp_250"
+
+    async def test_550_is_invalid(self) -> None:
+        outcome = await self._run(550)
+        assert outcome.status == VerificationStatus.INVALID
+        assert outcome.reason == "smtp_550"
+
+    async def test_greylist_is_unknown(self) -> None:
+        outcome = await self._run(451)
+        assert outcome.status == VerificationStatus.UNKNOWN
+        assert outcome.reason == "smtp_451"
+
+    async def test_unreachable_falls_back_to_risky(self) -> None:
+        outcome = await self._run(None)
+        assert outcome.status == VerificationStatus.RISKY
+        assert outcome.reason == "smtp_unreachable"
+
+    async def test_missing_mx_is_invalid(self) -> None:
+        async def lookup(_domain: str, _timeout: int) -> str | None:
+            return None
+
+        verifier = SmtpEmailVerifier(host_lookup=lookup)
+        outcome = await verifier.verify("info@dead.test")
+        assert outcome.status == VerificationStatus.INVALID
+        assert outcome.reason == "mx_missing"
+
+
+class TestZeroBounce:
+    async def _run(self, payload: dict, key: str = "key"):
+        async def http_get(_url: str, _params: dict) -> dict:
+            return payload
+
+        verifier = ZeroBounceVerifier(api_key=key, http_get=http_get)
+        return await verifier.verify("info@clinic.pk")
+
+    async def test_valid(self) -> None:
+        outcome = await self._run({"status": "valid"})
+        assert outcome.status == VerificationStatus.VALID
+        assert outcome.confidence == 95
+
+    async def test_catch_all(self) -> None:
+        outcome = await self._run({"status": "catch-all"})
+        assert outcome.status == VerificationStatus.CATCH_ALL
+
+    async def test_invalid(self) -> None:
+        outcome = await self._run({"status": "invalid"})
+        assert outcome.status == VerificationStatus.INVALID
+
+    async def test_unknown_falls_back(self) -> None:
+        outcome = await self._run({"status": "unknown"})
+        assert outcome.status == VerificationStatus.UNKNOWN
+
+    async def test_missing_key(self) -> None:
+        outcome = await self._run({"status": "valid"}, key="")
+        assert outcome.status == VerificationStatus.UNKNOWN
+        assert outcome.reason == "provider_missing_key"
+
+
+class TestProviderSelection:
+    def _settings(self, **overrides):
+        base = {
+            "email_verifier_provider": "mx",
+            "verify_timeout_ms": 5000,
+            "verify_smtp_helo_domain": "leadforge.dev",
+            "zero_bounce_api_key": "",
+        }
+        base.update(overrides)
+        return SimpleNamespace(**base)
+
+    def test_default_is_mx(self) -> None:
+        assert isinstance(build_email_verifier(self._settings()), MxEmailVerifier)
+
+    def test_smtp_selected(self) -> None:
+        verifier = build_email_verifier(self._settings(email_verifier_provider="smtp"))
+        assert isinstance(verifier, SmtpEmailVerifier)
+
+    def test_zerobounce_selected_with_key(self) -> None:
+        verifier = build_email_verifier(
+            self._settings(email_verifier_provider="zerobounce", zero_bounce_api_key="k")
+        )
+        assert isinstance(verifier, ZeroBounceVerifier)
+
+    def test_zerobounce_without_key_falls_back_to_mx(self) -> None:
+        verifier = build_email_verifier(self._settings(email_verifier_provider="zerobounce"))
+        assert isinstance(verifier, MxEmailVerifier)

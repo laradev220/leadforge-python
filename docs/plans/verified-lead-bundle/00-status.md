@@ -3,7 +3,7 @@
 - Gate 1 — Product: APPROVED 2026-11-16
 - Gate 2 — Architecture: APPROVED 2026-11-16 (amended: tiered verifier, mx default)
 - Gate 3 — Program Design: APPROVED 2026-11-16
-- Gate 4 — Slice plan: APPROVED 2026-11-16
+- Gate 4 — Slice plan: APPROVED 2026-11-16 — FEATURE COMPLETE 2026-11-16
 
 ## Slices
 - [x] Slice 1 — tracer bullet: migration + verification queue/worker stub + verify endpoint + enqueue switch
@@ -35,6 +35,10 @@
   - proof 2026-11-16: lead detail shows re-verify + verification badges + 17-row
     provenance table; admin queue labels include verification; README documents
     provider/env/commands; web typecheck clean; workers + API + web running
+- Follow-up completed: SMTP + ZeroBounce adapters and provider selection
+  (EMAIL_VERIFIER_PROVIDER); SMTP on this host -> RISKY smtp_unreachable (port 25 blocked)
+- Known limits: verified filter/export is strict VALID (needs SMTP/provider);
+  suppression has API only (no page); no per-attempt verification history
 
 ## Notes for a fresh session
 - Program: make LeadForge standout for **local-business outbound** (agencies and

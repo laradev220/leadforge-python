@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import structlog
 from leadforge_config import get_settings
 from leadforge_shared.types import VerificationStatus
 from leadforge_shared.utils import is_valid_email
 
-from leadforge_verification.providers import EmailVerifier, MxEmailVerifier
+from leadforge_verification.providers import (
+    EmailVerifier,
+    MxEmailVerifier,
+    SmtpEmailVerifier,
+    ZeroBounceVerifier,
+)
 from leadforge_verification.types import VerificationResult, result
+
+logger = structlog.get_logger("verification.email")
 
 
 def normalize_email(value: str) -> str:
@@ -17,7 +25,23 @@ def normalize_email(value: str) -> str:
 def build_email_verifier(settings=None) -> EmailVerifier:
     """Build the configured verifier. Slice 2 supports MX only."""
     settings = settings or get_settings()
-    # smtp/zerobounce adapters land in the next slice; MX is the safe default.
+    provider = (settings.email_verifier_provider or "mx").strip().lower()
+    if provider == "smtp":
+        return SmtpEmailVerifier(
+            timeout_ms=settings.verify_timeout_ms,
+            helo_domain=settings.verify_smtp_helo_domain,
+        )
+    if provider == "zerobounce":
+        if settings.zero_bounce_api_key:
+            return ZeroBounceVerifier(
+                api_key=settings.zero_bounce_api_key,
+                timeout_ms=settings.verify_timeout_ms,
+            )
+        logger.warning(
+            "verification.provider_missing_key",
+            provider="zerobounce",
+            fallback="mx",
+        )
     return MxEmailVerifier(timeout_ms=settings.verify_timeout_ms)
 
 
